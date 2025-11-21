@@ -194,52 +194,174 @@ async function checkAdminAndBanStatus() {
 // Templates (Views)
 // ===============================
 
+
+
 function loginViewTemplate() {
   return `
-  <div class="auth-container">
-    <h2>Login</h2>
-    <form id="loginForm">
-      <input type="email" id="loginEmail" placeholder="Email" required />
-      <input type="password" id="loginPassword" placeholder="Password" required />
-      <button type="submit">Login</button>
-    </form>
-    <p style="margin-top:8px;text-align:center;">Don't have an account? <a href="#" id="goToSignup">Create account</a></p>
-    <p id="loginError" style="color:red;margin-top:8px;font-size:13px;"></p>
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="auth-logo-circle">S</div>
+        <div class="auth-brand-text">
+          <h1>SocialApp</h1>
+          <p>Welcome back 👋</p>
+        </div>
+      </div>
+
+      <h2 class="auth-title">Login to your account</h2>
+      <p class="auth-subtitle">Enter your credentials to continue</p>
+
+      <form id="loginForm" class="auth-form">
+        <div class="auth-field">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" placeholder="you@example.com" required />
+        </div>
+
+        <div class="auth-field">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" required />
+        </div>
+
+        <button type="submit" class="auth-btn">Login</button>
+        <p id="loginError" class="auth-error"></p>
+      </form>
+
+      <div class="auth-footer">
+        <span>Don't have an account?</span>
+        <button id="goToSignup" class="auth-link-btn">Create account</button>
+      </div>
+    </div>
   </div>
   `;
 }
 
 function signupViewTemplate() {
   return `
-  <div class="auth-container">
-    <h2>Create Account</h2>
-    <form id="signupForm">
-      <input type="text" id="signupName" placeholder="Full Name" required />
-      <input type="text" id="signupUsername" placeholder="Username" required />
-      <input type="email" id="signupEmail" placeholder="Email" required />
-      <input type="password" id="signupPassword" placeholder="Password" required />
-      <button type="submit">Create Account</button>
-    </form>
-    <p style="margin-top:8px;text-align:center;">Already have an account? <a href="#" id="goToLogin">Login</a></p>
-    <p id="signupError" style="color:red;margin-top:8px;font-size:13px;"></p>
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="auth-logo-circle">S</div>
+        <div class="auth-brand-text">
+          <h1>SocialApp</h1>
+          <p>Join the community 🚀</p>
+        </div>
+      </div>
+
+      <h2 class="auth-title">Create your account</h2>
+      <p class="auth-subtitle">It only takes a minute</p>
+
+      <form id="signupForm" class="auth-form">
+        <div class="auth-field">
+          <label for="signupName">Full Name</label>
+          <input type="text" id="signupName" placeholder="John Doe" required />
+        </div>
+
+        <div class="auth-field">
+          <label for="signupUsername">Username</label>
+          <input type="text" id="signupUsername" placeholder="username" required />
+        </div>
+
+        <div class="auth-field">
+          <label for="signupEmail">Email</label>
+          <input type="email" id="signupEmail" placeholder="you@example.com" required />
+        </div>
+
+        <div class="auth-field">
+          <label for="signupPassword">Password</label>
+          <input type="password" id="signupPassword" placeholder="Minimum 6 characters" required />
+        </div>
+
+        <button type="submit" class="auth-btn">Create account</button>
+        <p id="signupError" class="auth-error"></p>
+      </form>
+
+      <div class="auth-footer">
+        <span>Already have an account?</span>
+        <button id="goToLogin" class="auth-link-btn">Login</button>
+      </div>
+    </div>
   </div>
   `;
 }
 
+
+
+
+
+
+
+
+
 function commonNavHtml() {
   return `
-    <button id="navHome">Home</button>
-    <button id="navMessages">Messages</button>
-    <button id="navNotifications">Notifications</button>
-    <button id="navSearch">Search</button>
-    <button id="navSaved">Saved</button>
-    <button id="navActivity">Activity</button>
-    <button id="navAdmin">Admin</button>
-    <button id="navProfile">Profile</button>
-    <button id="logoutBtn">Logout</button>
-    <button id="themeToggleBtn" class="theme-toggle-btn">...</button>
+    <div class="nav-container">
+      <!-- LEFT: Icons (Home, Messages, Notifications) -->
+      <div class="nav-left">
+        <div class="nav-icons">
+          <button id="navHome" class="nav-icon-btn" title="Home">🏠</button>
+          <button id="navMessages" class="nav-icon-btn" title="Messages">💬</button>
+          <button id="navNotifications" class="nav-icon-btn" title="Notifications">🔔</button>
+        </div>
+      </div>
+
+      <!-- CENTER: Global Search (সব পেজে কাজ করবে, বিশেষ করে Home/Feed এ সুন্দর লাগবে) -->
+      <div class="nav-center">
+        <div class="nav-search">
+          <input
+            type="text"
+            id="globalSearchInput"
+            placeholder="Search users, posts or #hashtags..."
+          />
+          <span class="nav-search-icon">🔍</span>
+        </div>
+      </div>
+
+      <!-- RIGHT: Profile, Theme, Menu -->
+      <div class="nav-right">
+        <button id="navProfile" class="nav-icon-btn" title="Profile">👤</button>
+        <button
+          id="themeToggleBtn"
+          class="nav-icon-btn theme-toggle-btn"
+          title="Toggle theme"
+        >
+          …
+        </button>
+        <button
+          id="navMenuToggle"
+          class="nav-icon-btn nav-menu-toggle"
+          title="Menu"
+        >
+          ☰
+        </button>
+      </div>
+
+      <!-- SIDE MENU: সব অপশন এখানে -->
+      <div id="navSideMenu" class="nav-side-menu">
+        <div class="nav-side-inner">
+          <button class="nav-side-close" id="navSideClose">✕</button>
+
+          <div class="nav-side-section">
+            <div class="nav-side-title">Navigation</div>
+            <button id="navHome" class="nav-side-item">🏠 Home</button>
+            <button id="navMessages" class="nav-side-item">💬 Messages</button>
+            <button id="navNotifications" class="nav-side-item">🔔 Notifications</button>
+            <button id="navSearch" class="nav-side-item">🔍 Search</button>
+            <button id="navSaved" class="nav-side-item">💾 Saved</button>
+            <button id="navActivity" class="nav-side-item">📜 Activity</button>
+            <button id="navAdmin" class="nav-side-item">🛡 Admin Panel</button>
+            <button id="navProfile" class="nav-side-item">👤 Profile</button>
+          </div>
+
+          <div class="nav-side-section">
+            <div class="nav-side-title">Settings</div>
+            <button id="logoutBtn" class="nav-side-item nav-logout">🚪 Logout</button>
+          </div>
+        </div>
+      </div>
+    </div>
   `;
 }
+
 
 function feedViewTemplate(user) {
   return `
@@ -306,6 +428,8 @@ function feedViewTemplate(user) {
   `;
 }
 
+
+
 function messagesViewTemplate() {
   return `
   <div class="feed-layout">
@@ -318,33 +442,66 @@ function messagesViewTemplate() {
 
     <main class="feed-main">
       <div class="chat-layout">
-        <aside class="profile-main-card" style="flex:0 0 200px;">
-          <h3 style="margin-bottom:8px;">Chats</h3>
-          <div id="chatContactsList">
-            <p style="font-size:14px;color:#666;">Loading users...</p>
+
+        <!-- LEFT: Chat list -->
+        <aside class="chat-sidebar profile-main-card">
+          <div class="chat-sidebar-header">
+            <h3>Messages</h3>
+            <span class="chat-sidebar-sub">Select a friend to start</span>
+          </div>
+          <div id="chatContactsList" class="chat-contacts">
+            <p class="chat-empty-text">Loading users...</p>
           </div>
         </aside>
 
-        <section class="chat-window">
+        <!-- RIGHT: Chat window -->
+        <section class="chat-window profile-main-card">
+          <!-- Placeholder -->
           <div class="chat-placeholder">
-            Select a user to start chatting.
+            <div class="chat-placeholder-icon">💬</div>
+            <div class="chat-placeholder-title">No conversation selected</div>
+            <div class="chat-placeholder-text">
+              Choose a user from the left to start chatting.
+            </div>
           </div>
+
+          <!-- Active chat header -->
           <div class="chat-header" style="display:none;">
-            <div id="chatPartnerName" style="font-weight:600;"></div>
-            <div id="chatPartnerStatus" style="font-size:12px;color:#666;"></div>
+            <div class="chat-header-main">
+              <div class="chat-header-avatar"></div>
+              <div>
+                <div id="chatPartnerName" class="chat-header-name"></div>
+                <div id="chatPartnerStatus" class="chat-header-status"></div>
+              </div>
+            </div>
           </div>
-          <div id="chatMessages" class="chat-messages" style="max-height:400px;overflow-y:auto;margin:8px 0;"></div>
-          <div class="chat-input-row" style="display:none;gap:6px;">
-            <input id="chatMessageInput" type="text" placeholder="Type a message..." />
-            <button id="chatSendBtn" class="post-submit-btn">Send</button>
+
+          <!-- Messages area -->
+          <div id="chatMessages" class="chat-messages"></div>
+
+          <!-- Input area -->
+          <div class="chat-input-row" style="display:none;">
+            <input
+              id="chatMessageInput"
+              type="text"
+              placeholder="Type a message..."
+              autocomplete="off"
+            />
+            <button id="chatSendBtn" class="chat-send-btn">Send</button>
           </div>
-          <div id="typingIndicator" class="typing-indicator" style="font-size:12px;color:#666;margin-top:4px;"></div>
+
+          <!-- Typing indicator -->
+          <div id="typingIndicator" class="typing-indicator"></div>
         </section>
       </div>
     </main>
   </div>
   `;
 }
+
+
+
+
 
 function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
   const createdAt = userData.createdAt?.toDate
@@ -785,6 +942,9 @@ function startPresenceTracking() {
 // Top Nav (Common)
 // ===============================
 
+// ===============================
+// Top Nav (Common) - UPDATED WITH SIDE MENU + GLOBAL SEARCH
+// ===============================
 function setupTopNavCommon() {
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
@@ -806,6 +966,7 @@ function setupTopNavCommon() {
     });
   }
 
+  // মূল navigate বাটনগুলা (আগের মতই রেখে দিচ্ছি)
   document.getElementById("navHome")?.addEventListener("click", () => {
     showFeedView();
   });
@@ -872,7 +1033,58 @@ function setupTopNavCommon() {
       });
     }
   }
+
+  // ========== NEW: Navbar side menu + global search ==========
+  const sideMenu = document.getElementById("navSideMenu");
+  const menuToggle = document.getElementById("navMenuToggle");
+  const sideClose = document.getElementById("navSideClose");
+  const globalSearchInput = document.getElementById("globalSearchInput");
+
+  // ☰ বাটনে ক্লিক করলে সাইড মেনু ওপেন
+  if (menuToggle && sideMenu) {
+    menuToggle.onclick = () => {
+      sideMenu.classList.add("open");
+    };
+  }
+
+  // ✕ বাটনে ক্লিক করলে সাইড মেনু ক্লোজ
+  if (sideClose && sideMenu) {
+    sideClose.onclick = () => {
+      sideMenu.classList.remove("open");
+    };
+  }
+
+  // overlay তে ক্লিক করলে ক্লোজ (বাইরের কালো অংশে ক্লিক)
+  if (sideMenu) {
+    sideMenu.addEventListener("click", (e) => {
+      if (e.target === sideMenu) {
+        sideMenu.classList.remove("open");
+      }
+    });
+  }
+
+  // Global search bar: Enter চাপলে সরাসরি Search page
+  if (globalSearchInput) {
+    globalSearchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const text = globalSearchInput.value.trim();
+        if (!text) return;
+
+        showSearchView();
+
+        // Search page render হওয়ার পর main search input এ text বসানো
+        setTimeout(() => {
+          const mainInput = document.getElementById("searchInput");
+          if (mainInput) {
+            mainInput.value = text;
+            mainInput.focus();
+          }
+        }, 80);
+      }
+    });
+  }
 }
+
 
 // ===============================
 // Story System (24h)
