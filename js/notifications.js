@@ -206,7 +206,7 @@ import {
       }
   
       // 👉 এখানে তোমার নিজস্ব VAPID public key বসাবে
-      const vapidKey = "YOUR_VAPID_PUBLIC_KEY";
+      const vapidKey = "BAQEKZozm2azJlWya8-HHxPcWj5VDGYjBJfL6o7FW8kmLFr_kPXgPqYVUUCCfIkwKsZHxkjP_hK77AT9xIFIuv0";
   
       const token = await getToken(messaging, { vapidKey });
       if (!token) return;
