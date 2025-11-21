@@ -1,224 +1,114 @@
 // js/notifications.js
-// Firestore based notification system + optional FCM
+// শুধু Firestore ভিত্তিক in-app notifications
+// কোনো extra index বা FCM (vapid key) লাগবে না
 
 import {
-    collection,
-    addDoc,
-    serverTimestamp,
-    query,
-    where,
-    orderBy,
-    limit,
-    onSnapshot,
-    updateDoc,
-    doc,
-    getDocs,
-    arrayUnion,
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  
-  import {
-    getMessaging,
-    getToken,
-    onMessage,
-    isSupported,
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
-  
-  let db = null;
-  let app = null;
-  let messaging = null;
-  
-  // ===============================
-  // Init with existing app + db
-  // ===============================
-  
-  export async function initNotifications(firebaseApp, firebaseDb) {
-    app = firebaseApp;
-    db = firebaseDb;
-  
-    // Messaging optional (https domain + proper setup লাগবে)
-    try {
-      if (await isSupported()) {
-        messaging = getMessaging(app);
-  
-        // Foreground message listener
-        onMessage(messaging, (payload) => {
-          console.log("FCM foreground message:", payload);
-          if (payload?.notification?.title) {
-            alert(
-              `🔔 ${payload.notification.title}\n\n${
-                payload.notification.body || ""
-              }`
-            );
-          }
-        });
-      }
-    } catch (err) {
-      console.warn("Messaging not supported in this environment:", err);
-    }
-  }
-  
-  // ===============================
-  // Create a notification document
-  // ===============================
-  /*
-    createNotification({
-      userId:       যাকে নোটিফিকেশন যাবে
-      fromUserId:   কে action করলো
-      type:         "like" | "comment" | "follow" | "message"
-      postId?:      (optional)
-      chatId?:      (optional)
-      previewText?: (optional small text)
-    })
-  */
-  
-  export async function createNotification({
-    userId,
-    fromUserId,
-    type,
-    postId = null,
-    chatId = null,
-    previewText = "",
-  }) {
-    if (!db) return;
-    if (!userId || !fromUserId) return;
-    if (userId === fromUserId) return; // নিজের জন্য notification না
-  
-    try {
-      const colRef = collection(db, "notifications");
-      await addDoc(colRef, {
-        userId,
-        fromUserId,
-        type,
-        postId,
-        chatId,
-        previewText,
-        isRead: false,
-        createdAt: serverTimestamp(),
-      });
-    } catch (err) {
-      console.error("Notification create error:", err);
-    }
-  }
-  
-  // ===============================
-  // Listen notifications (realtime)
-  // ===============================
-  /*
-    const unsub = startNotificationsListener(currentUser.uid, {
-      onUnreadChange: (count) => {...},
-      onListChange: (list) => {...}
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  limit,
+  onSnapshot,
+  getDocs,
+  updateDoc,
+  doc,
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+let dbRef = null;
+
+// app.js থেকে initNotifications(app, db) কল হবে
+export function initNotifications(app, db) {
+  dbRef = db;
+}
+
+// নতুন Notification তৈরি করা (Like / Comment / Follow / Message)
+export async function createNotification(payload) {
+  if (!dbRef) return;
+
+  try {
+    const colRef = collection(dbRef, "notifications");
+    await addDoc(colRef, {
+      userId: payload.userId,        // যার জন্য নোটিফিকেশন
+      fromUserId: payload.fromUserId || null,
+      type: payload.type || "activity", // like/comment/follow/message
+      postId: payload.postId || null,
+      chatId: payload.chatId || null,
+      previewText: payload.previewText || "",
+      isRead: false,
+      createdAt: serverTimestamp(),
     });
-  */
-  
-  export function startNotificationsListener(userId, callbacks = {}) {
-    if (!db || !userId) return () => {};
-  
-    const colRef = collection(db, "notifications");
-    const q = query(
-      colRef,
-      where("userId", "==", userId),
-      orderBy("createdAt", "desc"),
-      limit(30)
-    );
-  
-    const unsubscribe = onSnapshot(
-      q,
-      (snap) => {
-        const list = [];
-        let unread = 0;
-  
-        snap.forEach((docSnap) => {
-          const data = docSnap.data();
-          list.push({
-            id: docSnap.id,
-            ...data,
-          });
-          if (!data.isRead) unread++;
-        });
-  
-        if (callbacks.onUnreadChange) {
-          callbacks.onUnreadChange(unread);
-        }
-        if (callbacks.onListChange) {
-          callbacks.onListChange(list);
-        }
-      },
-      (err) => {
-        console.error("Notification listener error:", err);
-      }
-    );
-  
-    return unsubscribe;
+  } catch (err) {
+    console.error("createNotification error:", err);
   }
-  
-  // ===============================
-  // Mark all notifications as read
-  // ===============================
-  
-  export async function markAllNotificationsRead(userId) {
-    if (!db || !userId) return;
-  
-    try {
-      const colRef = collection(db, "notifications");
-      const q = query(
-        colRef,
-        where("userId", "==", userId),
-        where("isRead", "==", false),
-        limit(50)
-      );
-      const snap = await getDocs(q);
-  
-      const promises = [];
+}
+
+// Notification listener (index ছাড়া কাজ করবে)
+export function startNotificationsListener(
+  userId,
+  { onUnreadChange, onListChange }
+) {
+  if (!dbRef || !userId) return () => {};
+
+  const colRef = collection(dbRef, "notifications");
+
+  // 👉 শুধু userId = currentUser.uid দিয়ে filter করেছি
+  // কোনো orderBy ব্যবহার করিনি, তাই Firestore composite index লাগবে না
+  const q = query(colRef, where("userId", "==", userId), limit(50));
+
+  const unsub = onSnapshot(
+    q,
+    (snap) => {
+      const list = [];
+      let unreadCount = 0;
+
       snap.forEach((docSnap) => {
-        const ref = doc(db, "notifications", docSnap.id);
-        promises.push(updateDoc(ref, { isRead: true }));
+        const data = docSnap.data();
+        list.push({ id: docSnap.id, ...data });
+        if (!data.isRead) unreadCount++;
       });
-  
-      if (promises.length) {
-        await Promise.all(promises);
-      }
-    } catch (err) {
-      console.error("Mark read error:", err);
+
+      if (onUnreadChange) onUnreadChange(unreadCount);
+      if (onListChange) onListChange(list);
+    },
+    (err) => {
+      console.error("Notification listener error:", err);
     }
-  }
-  
-  // ===============================
-  // FCM: request permission + save token
-  // ===============================
-  /*
-    Optional future:
-    await requestFcmTokenForUser(currentUser.uid);
-  
-    তারপর backend / cloud function থেকে
-    notifications পাঠানো যাবে।
-  */
-  
-  export async function requestFcmTokenForUser(userId) {
-    if (!messaging || !db || !userId) return;
-  
-    if (!("Notification" in window)) return;
-  
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        console.log("Notification permission not granted");
-        return;
+  );
+
+  return unsub;
+}
+
+// সব unread notification-কে read করে দেয়
+export async function markAllNotificationsRead(userId) {
+  if (!dbRef || !userId) return;
+
+  try {
+    const colRef = collection(dbRef, "notifications");
+
+    // এখানেও শুধু userId দিয়ে filter করছি
+    const q = query(colRef, where("userId", "==", userId), limit(100));
+    const snap = await getDocs(q);
+
+    const tasks = [];
+    snap.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (!data.isRead) {
+        const ref = doc(dbRef, "notifications", docSnap.id);
+        tasks.push(updateDoc(ref, { isRead: true }));
       }
-  
-      // 👉 এখানে তোমার নিজস্ব VAPID public key বসাবে
-      const vapidKey = "BAQEKZozm2azJlWya8-HHxPcWj5VDGYjBJfL6o7FW8kmLFr_kPXgPqYVUUCCfIkwKsZHxkjP_hK77AT9xIFIuv0";
-  
-      const token = await getToken(messaging, { vapidKey });
-      if (!token) return;
-  
-      const userRef = doc(db, "users", userId);
-      await updateDoc(userRef, {
-        fcmTokens: arrayUnion(token),
-      });
-  
-      console.log("FCM token saved:", token);
-    } catch (err) {
-      console.error("FCM token error:", err);
+    });
+
+    if (tasks.length) {
+      await Promise.all(tasks);
     }
+  } catch (err) {
+    console.error("markAllNotificationsRead error:", err);
   }
-  
+}
+
+// FCM / Push Notification এখন ব্যবহার করছি না
+// শুধু dummy function রেখে দিলাম যাতে app.js এ error না দেয়
+export async function requestFcmTokenForUser(userId) {
+  console.log("FCM push notification এখন কনফিগ করা নেই (ঠিক আছে)।");
+}
