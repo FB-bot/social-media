@@ -44,6 +44,7 @@ export async function createNotification(payload) {
 }
 
 // Notification listener (index ছাড়া কাজ করবে)
+// Notification listener (index ছাড়া কাজ করবে + নতুনগুলো সবসময় উপরে)
 export function startNotificationsListener(
   userId,
   { onUnreadChange, onListChange }
@@ -52,8 +53,7 @@ export function startNotificationsListener(
 
   const colRef = collection(dbRef, "notifications");
 
-  // 👉 শুধু userId = currentUser.uid দিয়ে filter করেছি
-  // কোনো orderBy ব্যবহার করিনি, তাই Firestore composite index লাগবে না
+  // শুধু userId দিয়ে query, orderBy দিচ্ছি না → index লাগবে না
   const q = query(colRef, where("userId", "==", userId), limit(50));
 
   const unsub = onSnapshot(
@@ -68,6 +68,19 @@ export function startNotificationsListener(
         if (!data.isRead) unreadCount++;
       });
 
+      // ⭐ এখানে client-side sort: নতুন createdAt আগে
+      list.sort((a, b) => {
+        const ta =
+          a.createdAt && typeof a.createdAt.toDate === "function"
+            ? a.createdAt.toDate().getTime()
+            : 0;
+        const tb =
+          b.createdAt && typeof b.createdAt.toDate === "function"
+            ? b.createdAt.toDate().getTime()
+            : 0;
+        return tb - ta; // desc (নতুন আগে)
+      });
+
       if (onUnreadChange) onUnreadChange(unreadCount);
       if (onListChange) onListChange(list);
     },
@@ -78,6 +91,7 @@ export function startNotificationsListener(
 
   return unsub;
 }
+
 
 // সব unread notification-কে read করে দেয়
 export async function markAllNotificationsRead(userId) {
