@@ -109,10 +109,13 @@ let storiesCache = {};
 // Browser Notification Feature
 // =============================
 
+// =============================
+// Browser Notification Feature
+// =============================
 
 let lastNotificationIds = []; // আগের notification ID গুলো মনে রাখার জন্য
 
-function requestBrowserNotificationPermission() {
+window.requestBrowserNotificationPermission = function () {
   if (!("Notification" in window)) {
     console.log("এই ব্রাউজারে Notification API সাপোর্ট করে না।");
     return;
@@ -123,21 +126,24 @@ function requestBrowserNotificationPermission() {
     return;
   }
 
-  if (Notification.permission !== "denied") {
-    Notification.requestPermission().then((permission) => {
-      console.log("Notification permission:", permission);
-    });
-  }
-}
+  Notification.requestPermission().then((permission) => {
+    console.log("Notification permission:", permission);
+    if (permission === "granted") {
+      window.showNativeNotification(
+        "Notification enabled",
+        "Popup now works!"
+      );
+    }
+  });
+};
 
-function showNativeNotification(title, body) {
+window.showNativeNotification = function (title, body) {
   if (!("Notification" in window)) return;
   if (Notification.permission !== "granted") return;
 
-  new Notification(title, {
-    body: body,
-  });
-}
+  new Notification(title, { body });
+};
+
 
 
 
@@ -164,6 +170,82 @@ let currentChatPartnerId = null;
 let chatMessagesUnsub = null;
 let typingUnsub = null;
 const typingTimeouts = {};
+
+
+
+// =============================
+// Message notification helpers
+// =============================
+
+const userNameCache = {}; // একবার লোড করলে আবার লোড করব না
+
+async function getUserDisplayName(uid) {
+  if (!uid) return "Someone";
+  if (userNameCache[uid]) return userNameCache[uid];
+
+  try {
+    const ref = doc(db, "users", uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const d = snap.data();
+      const name = d.name || d.username || "Someone";
+      userNameCache[uid] = name;
+      return name;
+    }
+  } catch (e) {
+    console.error("getUserDisplayName error:", e);
+  }
+
+  return "Someone";
+}
+
+// Navbar Messages icon highlight
+function updateNavMessagesHighlight(unreadCount) {
+  const btn = document.getElementById("navMessages");
+  if (!btn) return;
+  if (unreadCount > 0) {
+    btn.classList.add("nav-messages-unread");
+  } else {
+    btn.classList.remove("nav-messages-unread");
+  }
+}
+
+// Chat list এ unread user highlight
+// Chat list এ unread user highlight + উপরে তোলা
+function highlightUnreadChatsFromNotifications(list) {
+  const unreadSenders = new Set(
+    (list || [])
+      .filter((n) => n.type === "message" && !n.isRead && n.fromUserId)
+      .map((n) => n.fromUserId)
+  );
+
+  const container = document.getElementById("chatContactsList");
+  if (!container) return;
+
+  const items = Array.from(container.querySelectorAll(".chat-list-item"));
+
+  items.forEach((el) => {
+    const uid = el.dataset.uid;
+    if (uid && unreadSenders.has(uid)) {
+      el.classList.add("chat-unread");
+    } else {
+      el.classList.remove("chat-unread");
+    }
+  });
+
+  // ⭐ unread থাকা user গুলোকে উপরে নিয়ে আসি
+  // আগে unread গুলো, তারপর বাকি গুলো
+  items
+    .sort((a, b) => {
+      const aUnread = a.classList.contains("chat-unread") ? 1 : 0;
+      const bUnread = b.classList.contains("chat-unread") ? 1 : 0;
+      return bUnread - aUnread; // unread আগে
+    })
+    .forEach((el) => container.appendChild(el));
+}
+
+
+
 
 // ===============================
 // Helpers
@@ -982,8 +1064,16 @@ function startPresenceTracking() {
 // Top Nav (Common)
 // ===============================
 
+
+
+
+
 // ===============================
 // Top Nav (Common) - UPDATED WITH SIDE MENU + GLOBAL SEARCH
+// ===============================
+
+// ===============================
+// Top Nav (Common) - UPDATED
 // ===============================
 function setupTopNavCommon() {
   const logoutBtn = document.getElementById("logoutBtn");
@@ -1002,11 +1092,12 @@ function setupTopNavCommon() {
       const current = localStorage.getItem(THEME_KEY) || "light";
       const next = current === "light" ? "dark" : "light";
       applyTheme(next);
-      themeToggleBtn.textContent = next === "light" ? "🌙 Dark" : "☀️ Light";
+      themeToggleBtn.textContent =
+        next === "light" ? "🌙 Dark" : "☀️ Light";
     });
   }
 
-  // মূল navigate বাটনগুলা (আগের মতই রেখে দিচ্ছি)
+  // Navigation buttons
   document.getElementById("navHome")?.addEventListener("click", () => {
     showFeedView();
   });
@@ -1020,9 +1111,10 @@ function setupTopNavCommon() {
     showMessagesView();
   });
 
-  document.getElementById("navNotifications")?.addEventListener(
-    "click",
-    async () => {
+  // 🔔 Notifications বাটন – এখন নামও দেখাবে
+  document
+    .getElementById("navNotifications")
+    ?.addEventListener("click", async () => {
       if (!currentUser) return;
 
       if (!latestNotifications.length) {
@@ -1030,25 +1122,42 @@ function setupTopNavCommon() {
         return;
       }
 
-      const lines = latestNotifications.map((n) => {
-        const t = n.type;
+      const lines = [];
+
+      for (const n of latestNotifications) {
         let msg = "";
-        if (t === "like") msg = "Someone liked your post";
-        else if (t === "comment") msg = "Someone commented on your post";
-        else if (t === "follow") msg = "Someone started following you";
-        else if (t === "message") msg = "New message";
-        else msg = "Activity";
+        if (n.type === "like") {
+          msg = "Someone liked your post";
+        } else if (n.type === "comment") {
+          msg = "Someone commented on your post";
+        } else if (n.type === "follow") {
+          msg = "Someone started following you";
+        } else if (n.type === "message") {
+          let name = "Someone";
+          if (n.fromUserId) {
+            name = await getUserDisplayName(n.fromUserId);
+          }
+          msg = `${name} sent you a message`;
+        } else {
+          msg = "Activity";
+        }
 
         if (n.previewText) {
           msg += `: "${n.previewText}"`;
         }
-        return `• ${msg}`;
-      });
+
+        lines.push("• " + msg);
+      }
 
       alert("🔔 Notifications:\n\n" + lines.join("\n"));
+
       await markAllNotificationsRead(currentUser.uid);
-    }
-  );
+
+      // সব read হয়ে গেলে highlight off
+      updateNavNotificationBadge(0);
+      updateNavMessagesHighlight(0);
+      highlightUnreadChatsFromNotifications([]);
+    });
 
   document.getElementById("navSearch")?.addEventListener("click", () => {
     showSearchView();
@@ -1074,27 +1183,24 @@ function setupTopNavCommon() {
     }
   }
 
-  // ========== NEW: Navbar side menu + global search ==========
+  // ======= Side menu + global search (আগের মতোই থাকলো) =======
   const sideMenu = document.getElementById("navSideMenu");
   const menuToggle = document.getElementById("navMenuToggle");
   const sideClose = document.getElementById("navSideClose");
   const globalSearchInput = document.getElementById("globalSearchInput");
 
-  // ☰ বাটনে ক্লিক করলে সাইড মেনু ওপেন
   if (menuToggle && sideMenu) {
     menuToggle.onclick = () => {
       sideMenu.classList.add("open");
     };
   }
 
-  // ✕ বাটনে ক্লিক করলে সাইড মেনু ক্লোজ
   if (sideClose && sideMenu) {
     sideClose.onclick = () => {
       sideMenu.classList.remove("open");
     };
   }
 
-  // overlay তে ক্লিক করলে ক্লোজ (বাইরের কালো অংশে ক্লিক)
   if (sideMenu) {
     sideMenu.addEventListener("click", (e) => {
       if (e.target === sideMenu) {
@@ -1103,16 +1209,13 @@ function setupTopNavCommon() {
     });
   }
 
-  // Global search bar: Enter চাপলে সরাসরি Search page
   if (globalSearchInput) {
     globalSearchInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         const text = globalSearchInput.value.trim();
         if (!text) return;
-
         showSearchView();
 
-        // Search page render হওয়ার পর main search input এ text বসানো
         setTimeout(() => {
           const mainInput = document.getElementById("searchInput");
           if (mainInput) {
@@ -1124,6 +1227,8 @@ function setupTopNavCommon() {
     });
   }
 }
+
+
 
 
 // ===============================
@@ -2628,9 +2733,9 @@ function extractCountFromButton(text) {
   return match ? parseInt(match[1], 10) : 0;
 }
 
-// ===============================
-// Auth State Listener
-// ===============================
+
+
+
 // =============================
 // Auth State Listener
 // =============================
@@ -2643,6 +2748,8 @@ onAuthStateChanged(auth, async (user) => {
   }
   latestNotifications = [];
   updateNavNotificationBadge(0);
+  updateNavMessagesHighlight(0);
+  highlightUnreadChatsFromNotifications([]);
 
   if (user) {
     await checkAdminAndBanStatus();
@@ -2656,37 +2763,48 @@ onAuthStateChanged(auth, async (user) => {
         latestNotifications = list;
 
         const currentIds = list.map((n) => n.id);
+        let unreadMessages = 0;
 
         list.forEach((n) => {
+          // popup (যদি আগের popup ফিচার রাখো)
           if (!lastNotificationIds.includes(n.id) && !n.isRead) {
             let title = "New activity";
             let body = "";
 
             if (n.type === "like") title = "Someone liked your post";
-            else if (n.type === "comment") title = "New comment on your post";
-            else if (n.type === "follow") title = "You have a new follower";
+            else if (n.type === "comment")
+              title = "New comment on your post";
+            else if (n.type === "follow")
+              title = "You have a new follower";
             else if (n.type === "message") title = "New message";
 
             if (n.previewText) {
               body = n.previewText;
             }
 
-            showNativeNotification(title, body);
+            if (typeof showNativeNotification === "function") {
+              showNativeNotification(title, body);
+            }
+          }
+
+          // message unread গুনছি
+          if (n.type === "message" && !n.isRead) {
+            unreadMessages++;
           }
         });
 
         lastNotificationIds = currentIds;
+
+        // Navbar icon highlight + chat list highlight
+        updateNavMessagesHighlight(unreadMessages);
+        highlightUnreadChatsFromNotifications(list);
       },
     });
 
-    // চাইলে ভবিষ্যতে Push Notification token:
-    // await requestFcmTokenForUser(user.uid);
-
     showFeedView();
-
-    // ⭐⭐ এই লাইনটাই ২ নম্বর ব্লক → একদম এখানে বসবে
-    requestBrowserNotificationPermission();
-
+    if (typeof requestBrowserNotificationPermission === "function") {
+      requestBrowserNotificationPermission();
+    }
   } else {
     if (presenceIntervalId) {
       clearInterval(presenceIntervalId);
