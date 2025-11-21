@@ -109,6 +109,7 @@ let storiesCache = {};
 // Browser Notification Feature
 // =============================
 
+
 let lastNotificationIds = []; // আগের notification ID গুলো মনে রাখার জন্য
 
 function requestBrowserNotificationPermission() {
@@ -137,7 +138,6 @@ function showNativeNotification(title, body) {
     body: body,
   });
 }
-
 
 
 
@@ -2637,13 +2637,10 @@ function extractCountFromButton(text) {
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
 
-  // Notification Listener বন্ধ করে দিলাম
   if (notificationsUnsub) {
     notificationsUnsub();
     notificationsUnsub = null;
   }
-
-  // আগের notification ডাটা রিসেট করলাম
   latestNotifications = [];
   updateNavNotificationBadge(0);
 
@@ -2651,9 +2648,6 @@ onAuthStateChanged(auth, async (user) => {
     await checkAdminAndBanStatus();
     startPresenceTracking();
 
-    // =============================
-    // Notification Listener (updated)
-    // =============================
     notificationsUnsub = startNotificationsListener(currentUser.uid, {
       onUnreadChange: (count) => {
         updateNavNotificationBadge(count);
@@ -2685,19 +2679,19 @@ onAuthStateChanged(auth, async (user) => {
       },
     });
 
-    // Feed দেখাও
+    // চাইলে ভবিষ্যতে Push Notification token:
+    // await requestFcmTokenForUser(user.uid);
+
     showFeedView();
 
-    // ⭐⭐ ব্রাউজার Notification permission চাই
+    // ⭐⭐ এই লাইনটাই ২ নম্বর ব্লক → একদম এখানে বসবে
     requestBrowserNotificationPermission();
 
   } else {
-
     if (presenceIntervalId) {
       clearInterval(presenceIntervalId);
       presenceIntervalId = null;
     }
-
     showLoginView();
   }
 });
