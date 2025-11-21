@@ -59,14 +59,14 @@ import {
 
 // TODO: নিজের Firebase project-এর config এখানে বসাও
 const firebaseConfig = {
-    apiKey: "AIzaSyA5_baqmrQfH_INYwEHJFoZ86GH4_UDI7c",
-    authDomain: "social-media-3f28d.firebaseapp.com",
-    projectId: "social-media-3f28d",
-    storageBucket: "social-media-3f28d.firebasestorage.app",
-    messagingSenderId: "346720725412",
-    appId: "1:346720725412:web:50a8fc02840898bef67931",
-    measurementId: "G-1KGNSHJP0M"
-  };
+  apiKey: "AIzaSyA5_baqmrQfH_INYwEHJFoZ86GH4_UDI7c",
+  authDomain: "social-media-3f28d.firebaseapp.com",
+  projectId: "social-media-3f28d",
+  storageBucket: "social-media-3f28d.firebasestorage.app",
+  messagingSenderId: "346720725412",
+  appId: "1:346720725412:web:50a8fc02840898bef67931",
+  measurementId: "G-1KGNSHJP0M"
+};
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -212,7 +212,7 @@ function loginViewTemplate() {
 function signupViewTemplate() {
   return `
   <div class="auth-container">
-    <h2>Create Account</</h2>
+    <h2>Create Account</h2>
     <form id="signupForm">
       <input type="text" id="signupName" placeholder="Full Name" required />
       <input type="text" id="signupUsername" placeholder="Username" required />
@@ -584,33 +584,52 @@ function adminViewTemplate() {
 }
 
 // ===============================
-// Post Card Renderer
+// SINGLE POST CARD TEMPLATE (FIXED AVATAR)
 // ===============================
 
 function postCardTemplate(id, data) {
-  const mediaHtml = data.mediaURL
-    ? data.mediaType?.startsWith("video")
-      ? `<div class="post-media"><video src="${data.mediaURL}" controls style="width:100%;max-height:420px;border-radius:10px;"></video></div>`
-      : `<div class="post-media"><img src="${data.mediaURL}" style="width:100%;max-height:420px;object-fit:cover;border-radius:10px;" /></div>`
-    : "";
+  const authorPhoto = data.authorPhotoURL || "";
 
-  const likes = data.likesCount || 0;
-  const comments = data.commentsCount || 0;
+  let mediaHtml = "";
+  if (data.mediaURL) {
+    if (data.mediaType?.startsWith("video")) {
+      mediaHtml = `
+        <div class="post-media">
+          <video src="${data.mediaURL}" controls
+          style="width:100%;max-height:420px;border-radius:10px;"></video>
+        </div>`;
+    } else {
+      mediaHtml = `
+        <div class="post-media">
+          <img src="${data.mediaURL}"
+          style="width:100%;max-height:420px;object-fit:cover;border-radius:10px;" />
+        </div>`;
+    }
+  }
 
   return `
     <article class="post-card" data-id="${id}" data-author-id="${data.authorId || ""}">
       <div class="post-header">
-        <div class="post-avatar"></div>
+        <div class="post-avatar">
+          ${authorPhoto ? `<img src="${authorPhoto}" alt="avatar" />` : ""}
+        </div>
         <div class="post-meta">
-          <div class="post-author" style="cursor:pointer;">${data.authorName || "Unknown"}</div>
+          <div class="post-author" style="cursor:pointer;">
+            ${data.authorName || "Unknown User"}
+          </div>
           <div class="post-time">${formatDate(data.createdAt)}</div>
         </div>
       </div>
-      <div class="post-content">${(data.text || "").replace(/\n/g, "<br>")}</div>
+
+      <div class="post-content">
+        ${(data.text || "").replace(/\n/g, "<br>")}
+      </div>
+
       ${mediaHtml}
+
       <div class="post-actions">
-        <button class="like-btn">Like (${likes})</button>
-        <button class="comment-btn">Comment (${comments})</button>
+        <button class="like-btn">Like (${data.likesCount || 0})</button>
+        <button class="comment-btn">Comment (${data.commentsCount || 0})</button>
         <button class="save-btn">Save</button>
         <button class="share-btn">Share</button>
         <button class="report-btn">Report</button>
@@ -618,6 +637,10 @@ function postCardTemplate(id, data) {
     </article>
   `;
 }
+
+
+
+
 
 // ===============================
 // Auth Views
@@ -652,6 +675,10 @@ function showLoginView() {
   });
 }
 
+
+
+
+
 function showSignupView() {
   render(signupViewTemplate());
 
@@ -682,10 +709,19 @@ function showSignupView() {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       currentUser = cred.user;
 
+      // ⭐ ডিফল্ট প্রোফাইল পিকচার (নেইম থেকে অটো জেনারেট)
+      const defaultPhoto =
+        "https://ui-avatars.com/api/?name=" +
+        encodeURIComponent(name || "User") +
+        "&background=0D8ABC&color=ffffff";
+
+      // Firebase Auth এ নাম + photoURL সেট করা
       await updateProfile(currentUser, {
         displayName: name,
+        photoURL: defaultPhoto,
       });
 
+      // Firestore users collection এ সেভ
       const userRef = doc(db, "users", currentUser.uid);
       await setDoc(userRef, {
         name,
@@ -693,7 +729,7 @@ function showSignupView() {
         email,
         createdAt: serverTimestamp(),
         bio: "",
-        photoURL: "",
+        photoURL: defaultPhoto,   // ⭐ এখানেও সেভ
         coverPhotoURL: "",
         followersCount: 0,
         followingCount: 0,
@@ -707,6 +743,9 @@ function showSignupView() {
     }
   });
 }
+
+
+
 
 // ===============================
 // Presence
@@ -866,7 +905,8 @@ async function setupStorySystem() {
   if (storyItems) {
     storyItems.onclick = (e) => {
       const item = e.target.closest(".story-item");
-      if (!item || item.classList.contains("story-add")) return;
+      if (item && item.classList.contains("story-add")) return;
+      if (!item) return;
       const storyId = item.dataset.storyId;
       if (!storyId) return;
       openStoryViewer(storyId);
@@ -1437,6 +1477,9 @@ async function showProfileView(userId) {
           if (name && currentUser.displayName !== name) {
             await updateProfile(currentUser, { displayName: name });
           }
+          if (photoURL && currentUser.photoURL !== photoURL) {
+            await updateProfile(currentUser, { photoURL });
+          }
 
           await logActivity("profile_update", {});
 
@@ -1575,7 +1618,7 @@ function renderSearchResults(results, container) {
       return;
     }
     if (postItem) {
-      alert("Single post view পরে বানানো যাবে (এই ভার্সনে নেই)।");
+      alert("Single post view এখনো বানাইনি (এই ভার্সনে নেই)।");
     }
   };
 }
@@ -1929,12 +1972,15 @@ function setupCreatePostForm() {
       }
 
       const postsCol = collection(db, "posts");
+
+      // ⭐ এখানে currentUser.photoURL ব্যবহার করছি (signup + profile update থেকে already সেট করা)
       const newPost = {
         text: text || "",
         mediaURL,
         mediaType,
         authorId: currentUser.uid,
         authorName: currentUser.displayName || "User",
+        authorPhotoURL: currentUser.photoURL || "",  // ⭐ ফিডে avatar এর জন্য
         createdAt: serverTimestamp(),
         likesCount: 0,
         commentsCount: 0,
@@ -1953,6 +1999,7 @@ function setupCreatePostForm() {
       const skeleton = document.getElementById("postsSkeleton");
       if (skeleton) skeleton.remove();
 
+      // UI তে সাথে সাথে দেখানোর জন্য লোকাল createdAt ব্যবহার
       const localData = {
         ...newPost,
         createdAt: { toDate: () => new Date() },
@@ -1970,6 +2017,8 @@ function setupCreatePostForm() {
     }
   });
 }
+
+
 
 async function loadInitialPosts() {
   const postsList = document.getElementById("postsList");
