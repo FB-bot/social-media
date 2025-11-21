@@ -1,0 +1,305 @@
+/* =============================
+   GLOBAL
+============================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: sans-serif;
+  }
+  
+  body.light-theme {
+    background: #f2f3f5;
+    color: #111;
+  }
+  
+  body.dark-theme {
+    background: #18191a;
+    color: #e4e6eb;
+  }
+  
+  #app {
+    width: 100%;
+    min-height: 100vh;
+  }
+  
+  /* =============================
+     AUTH PAGES
+  ============================= */
+  .auth-container {
+    width: 350px;
+    margin: 60px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  body.dark-theme .auth-container {
+    background: #242526;
+  }
+  .auth-container h2 {
+    text-align: center;
+    margin-bottom: 15px;
+  }
+  .auth-container input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+  .auth-container button {
+    width: 100%;
+    padding: 10px;
+    background: #1877f2;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  /* =============================
+     NAVBAR
+  ============================= */
+  .top-nav {
+    width: 100%;
+    padding: 12px;
+    background: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+    position: sticky;
+    top: 0;
+    z-index: 99;
+  }
+  body.dark-theme .top-nav {
+    background: #242526;
+    border-bottom: 1px solid #333;
+  }
+  .nav-links {
+    display: flex;
+    gap: 8px;
+  }
+  .nav-links button {
+    padding: 6px 10px;
+    background: transparent;
+    border: 1px solid #8885;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  body.dark-theme .nav-links button {
+    color: #e4e6eb;
+    border-color: #555;
+  }
+  
+  /* =============================
+     FEED LAYOUT
+  ============================= */
+  .feed-layout {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 10px;
+  }
+  .feed-main {
+    margin-top: 20px;
+  }
+  
+  /* =============================
+     CREATE POST
+  ============================= */
+  .create-post-card {
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  body.dark-theme .create-post-card {
+    background: #242526;
+    box-shadow: none;
+  }
+  .create-post-header {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .post-avatar {
+    width: 40px;
+    height: 40px;
+    background: #ccc;
+    border-radius: 50%;
+  }
+  
+  textarea#postText {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    resize: vertical;
+  }
+  body.dark-theme textarea#postText {
+    background: #3a3b3c;
+    border-color: #555;
+    color: #fff;
+  }
+  
+  .post-submit-btn {
+    background: #1877f2;
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  
+  /* =============================
+     POST CARD
+  ============================= */
+  .post-card {
+    background: #fff;
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  body.dark-theme .post-card {
+    background: #242526;
+    box-shadow: none;
+  }
+  .post-header {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .post-meta .post-author {
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .post-time {
+    font-size: 11px;
+    color: #666;
+  }
+  .post-content {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+  .post-actions button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px 0;
+    margin-right: 12px;
+    color: #1877f2;
+  }
+  body.dark-theme .post-actions button {
+    color: #2d88ff;
+  }
+  
+  /* =============================
+     PROFILE PAGE
+  ============================= */
+  .profile-layout {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 10px;
+  }
+  .profile-cover img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 12px;
+  }
+  .profile-avatar-big img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    margin-top: -40px;
+    border: 4px solid #fff;
+  }
+  .profile-basic-info {
+    padding: 10px 0;
+  }
+  .profile-name {
+    font-size: 20px;
+    font-weight: bold;
+  }
+  .profile-username {
+    font-size: 14px;
+    color: #666;
+  }
+  .profile-actions-row button {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #1877f2;
+    color: #fff;
+    border: none;
+  }
+  
+  /* =============================
+     STORY BAR
+  ============================= */
+  .story-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .story-item {
+    min-width: 70px;
+    text-align: center;
+    cursor: pointer;
+  }
+  .story-avatar {
+    width: 60px;
+    height: 60px;
+    background: #ddd;
+    border-radius: 50%;
+    margin: auto;
+  }
+  .story-name {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  
+  /* =============================
+     CHAT
+  ============================= */
+  .chat-layout {
+    display: flex;
+    gap: 12px;
+  }
+  .chat-window {
+    flex: 1;
+    background: #fff;
+    border-radius: 12px;
+    padding: 10px;
+  }
+  body.dark-theme .chat-window {
+    background: #242526;
+  }
+  .chat-message.self {
+    text-align: right;
+  }
+  .chat-message.other {
+    text-align: left;
+  }
+  
+  /* =============================
+     SKELETON
+  ============================= */
+  .skeleton {
+    background: linear-gradient(90deg,#eee,#ddd,#eee);
+    background-size: 200% 100%;
+    animation: shine 1.2s infinite;
+  }
+  @keyframes shine {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
