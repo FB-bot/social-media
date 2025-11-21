@@ -1241,3 +1241,48 @@ body.dark-theme .auth-field input {
     padding: 16px 12px;
   }
 }
+
+
+/* =============================
+   MESSAGE HIGHLIGHT STYLES
+============================= */
+
+/* Navbar এ Messages icon হাইলাইট (unread থাকলে) */
+.nav-icon-btn.nav-messages-unread {
+  font-weight: 700;
+  position: relative;
+}
+
+.nav-icon-btn.nav-messages-unread::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ef4444; /* লাল ডট */
+}
+
+/* Chat list এ unread user highlight */
+.chat-list-item.chat-unread {
+  background: #eff6ff;
+  font-weight: 600;
+  position: relative;
+}
+
+.chat-list-item.chat-unread::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #22c55e; /* সবুজ ডট */
+}
+
+body.dark-theme .chat-list-item.chat-unread {
+  background: #1e293b;
+}
