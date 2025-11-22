@@ -1818,3 +1818,159 @@ body.light-theme .notifications-panel {
 .notifications-close-btn:hover {
   color: #fff;
 }
+
+
+
+/* =============================
+   NOTIFICATIONS PANEL
+============================= */
+
+.notifications-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 70px 12px 12px;
+  background: rgba(15, 23, 42, 0.5);
+  z-index: 80;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.notifications-panel-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.notifications-panel-card {
+  width: 340px;
+  max-width: 100%;
+  max-height: 480px;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.5);
+  background: #ffffff;
+  color: #0f172a;
+}
+
+body.dark-theme .notifications-panel-card {
+  background: #020617;
+  color: #e5e7eb;
+}
+
+.notifications-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.notifications-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.notifications-close-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.notifications-close-btn:hover {
+  opacity: 1;
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.notifications-panel-body {
+  padding: 8px 0;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.notifications-empty {
+  padding: 16px;
+  font-size: 13px;
+  text-align: center;
+  opacity: 0.7;
+}
+
+/* notification items */
+
+.notification-item {
+  display: flex;
+  padding: 8px 12px;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.notification-item.unread {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.notification-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: #e5e7eb;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+body.dark-theme .notification-avatar {
+  background: #1e293b;
+}
+
+.notification-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.notification-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.notification-text {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.dark-theme .notification-text {
+  color: #9ca3af;
+}
+
+.notification-time {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
