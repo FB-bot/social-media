@@ -275,82 +275,80 @@ function updateNavMessagesHighlight(unreadCount) {
 // ===============================
 // Notifications panel create / reuse (with Close button)
 // ===============================
+// ===============================
+// Notifications panel (backdrop + card + header with close)
+// ===============================
 function ensureNotificationsPanelElement() {
-  let panel = document.getElementById("notificationsPanel");
-  if (!panel) {
-    panel = document.createElement("div");
-    panel.id = "notificationsPanel";
-    panel.className = "notifications-panel-backdrop";
+  let backdrop = document.getElementById("notificationsPanel");
+  if (!backdrop) {
+    // backdrop = dark overlay
+    backdrop = document.createElement("div");
+    backdrop.id = "notificationsPanel";
+    backdrop.className = "notifications-panel-backdrop";
 
-    panel.innerHTML = `
-      <div class="notifications-panel">
+    // ভিতরের card + header + body
+    backdrop.innerHTML = `
+      <div class="notifications-panel-card">
         <div class="notifications-panel-header">
-          <span>Notifications</span>
-          <button type="button" id="notificationsPanelClose" class="notifications-close-btn">✕</button>
+          <span class="notifications-panel-title">Notifications</span>
+          <button
+            type="button"
+            id="notificationsPanelClose"
+            class="notifications-close-btn"
+            aria-label="Close notifications"
+          >
+            ✕
+          </button>
         </div>
         <div id="notificationsPanelBody" class="notifications-panel-body">
-          <!-- notifications list এখানে render হবে -->
+          <!-- notifications list এখানে আসবে -->
         </div>
       </div>
     `;
 
-    document.body.appendChild(panel);
+    document.body.appendChild(backdrop);
 
-    // বাইরে কালো অংশে ক্লিক করলে panel বন্ধ হবে
-    panel.addEventListener("click", (e) => {
-      if (e.target === panel) {
-        panel.classList.remove("open");
+    // বাইরে (ডার্ক ব্যাকগ্রাউন্ডে) ক্লিক করলে বন্ধ
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) {
+        backdrop.classList.remove("open");
       }
     });
 
-    // Cross (✕) বাটনে ক্লিক করলে panel বন্ধ হবে
-    const closeBtn = panel.querySelector("#notificationsPanelClose");
+    // Cross বাটনে ক্লিক করলে বন্ধ
+    const closeBtn = backdrop.querySelector("#notificationsPanelClose");
     if (closeBtn) {
       closeBtn.addEventListener("click", () => {
-        panel.classList.remove("open");
+        backdrop.classList.remove("open");
       });
     }
   }
 
-  return panel;
+  return backdrop;
 }
+
 
 /// edit
 
 
+// ===============================
+// Notifications list render only inside #notificationsPanelBody
+// ===============================
 async function renderNotificationsPanel() {
-  const panel = ensureNotificationsPanelElement();
+  const backdrop = ensureNotificationsPanelElement();
+  const body = document.getElementById("notificationsPanelBody");
+  if (!body) return;
 
-  // === HEADER WITH CLOSE BUTTON ===
-  let headerHtml = `
-    <div class="notifications-header">
-      <div>
-        <div class="notifications-header-title">Notifications</div>
-        <div class="notifications-header-sub">Latest activity</div>
-      </div>
-
-      <!-- ❌ Close Button -->
-      <button id="notificationsCloseBtn" class="notifications-close-btn">✕</button>
-    </div>
-  `;
-
-  // === EMPTY CASE ===
+  // কোনো notification না থাকলে
   if (!latestNotifications || !latestNotifications.length) {
-    panel.innerHTML = `
-      ${headerHtml}
-      <div class="notifications-list">
-        <div class="notification-empty">কোনো নতুন নোটিফিকেশন নেই।</div>
+    body.innerHTML = `
+      <div class="notifications-empty">
+        কোনো নতুন নোটিফিকেশন নেই।
       </div>
     `;
-
-    document.getElementById("notificationsCloseBtn").onclick = () => {
-      panel.classList.remove("open");
-    };
-
     return;
   }
 
-  // === BUILD LIST ===
   const itemsHtml = [];
 
   for (const n of latestNotifications) {
@@ -358,56 +356,54 @@ async function renderNotificationsPanel() {
     let actorPhoto = "";
 
     if (n.fromUserId) {
-      const info = await getUserBasicInfo(n.fromUserId);
-      actorName = info.name || actorName;
-      actorPhoto = info.photoURL || "";
+      try {
+        const info = await getUserBasicInfo(n.fromUserId);
+        if (info) {
+          actorName = info.name || actorName;
+          actorPhoto = info.photoURL || actorPhoto;
+        }
+      } catch (e) {
+        console.error("getUserBasicInfo error:", e);
+      }
     }
 
-    let title = "";
-    let text = n.previewText ? `“${n.previewText}”` : "";
-
+    let title;
     if (n.type === "like") title = `${actorName} liked your post`;
     else if (n.type === "comment") title = `${actorName} commented on your post`;
     else if (n.type === "follow") title = `${actorName} started following you`;
     else if (n.type === "message") title = `${actorName} sent you a message`;
     else title = `Activity from ${actorName}`;
 
+    const preview = n.previewText || "";
     let timeText = "";
     try {
-      if (n.createdAt?.toDate) {
+      if (n.createdAt && typeof n.createdAt.toDate === "function") {
         timeText = formatDate(n.createdAt);
       }
-    } catch {}
+    } catch (e) {
+      console.error(e);
+    }
 
     const avatar = actorPhoto
       ? `<img src="${actorPhoto}" alt="${actorName}" />`
-      : `<span>${actorName[0]}</span>`;
+      : `<span>${(actorName[0] || "U").toUpperCase()}</span>`;
 
     itemsHtml.push(`
       <div class="notification-item ${n.isRead ? "" : "unread"}">
         <div class="notification-avatar">${avatar}</div>
         <div class="notification-main">
           <div class="notification-title">${title}</div>
-          ${text ? `<div class="notification-text">${text}</div>` : ""}
+          ${preview ? `<div class="notification-text">${preview}</div>` : ""}
           ${timeText ? `<div class="notification-time">${timeText}</div>` : ""}
         </div>
       </div>
     `);
   }
 
-  // === FINAL HTML ===
-  panel.innerHTML = `
-    ${headerHtml}
-    <div class="notifications-list">
-      ${itemsHtml.join("")}
-    </div>
-  `;
-
-  // === Close Button Event ===
-  document.getElementById("notificationsCloseBtn").onclick = () => {
-    panel.classList.remove("open");
-  };
+  // শুধু body অংশে লিস্ট বসাচ্ছি (header ওভাররাইট হবে না)
+  body.innerHTML = itemsHtml.join("");
 }
+
 
 
 
