@@ -1286,3 +1286,47 @@ body.dark-theme .auth-field input {
 body.dark-theme .chat-list-item.chat-unread {
   background: #1e293b;
 }
+
+
+/* =========================================
+   Messenger Style Chat List
+========================================= */
+.chat-list-item {
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.chat-list-item:hover {
+  background: #eef4ff;
+}
+
+.chat-unread {
+  background: #e0ebff;
+  font-weight: 700;
+}
+
+.chat-list-avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.chat-list-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chat-list-main {
+  flex: 1;
+}
