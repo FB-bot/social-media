@@ -71,6 +71,8 @@ const firebaseConfig = {
 
 
 
+
+
 // ==============================
 // USER INFO + AVATAR HELPERS
 // ==============================
@@ -591,41 +593,25 @@ function signupViewTemplate() {
 
 
 
+///edit 
+
 
 function commonNavHtml() {
   return `
     <div class="nav-container">
-      <!-- LEFT: Icons (Home, Messages, Notifications) -->
-      <div class="nav-left">
-        <div class="nav-icons">
-          <button id="navHome" class="nav-icon-btn" title="Home">🏠</button>
-          <button id="navMessages" class="nav-icon-btn" title="Messages">💬</button>
-          <button id="navNotifications" class="nav-icon-btn" title="Notifications">🔔</button>
-        </div>
-      </div>
+      <!-- TOP ROW: Logo + Search + Menu -->
+      <div class="nav-top-row">
+        <div class="nav-logo-text">SocialApp</div>
 
-      <!-- CENTER: Global Search (সব পেজে কাজ করবে, বিশেষ করে Home/Feed এ সুন্দর লাগবে) -->
-      <div class="nav-center">
         <div class="nav-search">
           <input
             type="text"
             id="globalSearchInput"
             placeholder="Search users, posts or #hashtags..."
           />
-          <span class="nav-search-icon">🔍</span>
+          <button type="button" class="nav-search-btn" id="navSearchIconBtn">🔍</button>
         </div>
-      </div>
 
-      <!-- RIGHT: Profile, Theme, Menu -->
-      <div class="nav-right">
-        <button id="navProfile" class="nav-icon-btn" title="Profile">👤</button>
-        <button
-          id="themeToggleBtn"
-          class="nav-icon-btn theme-toggle-btn"
-          title="Toggle theme"
-        >
-          …
-        </button>
         <button
           id="navMenuToggle"
           class="nav-icon-btn nav-menu-toggle"
@@ -635,7 +621,22 @@ function commonNavHtml() {
         </button>
       </div>
 
-      <!-- SIDE MENU: সব অপশন এখানে -->
+      <!-- BOTTOM ROW: Main icons -->
+      <div class="nav-bottom-row">
+        <button id="navHome" class="nav-icon-btn" title="Home">🏠</button>
+        <button id="navMessages" class="nav-icon-btn" title="Messages">💬</button>
+        <button id="navNotifications" class="nav-icon-btn" title="Notifications">🔔</button>
+        <button id="navProfile" class="nav-icon-btn" title="Profile">👤</button>
+        <button
+          id="themeToggleBtn"
+          class="nav-icon-btn theme-toggle-btn"
+          title="Toggle theme"
+        >
+          …
+        </button>
+      </div>
+
+      <!-- SIDE MENU: সব বাকি অপশন -->
       <div id="navSideMenu" class="nav-side-menu">
         <div class="nav-side-inner">
           <button class="nav-side-close" id="navSideClose">✕</button>
@@ -663,7 +664,23 @@ function commonNavHtml() {
 }
 
 
+
+
+
 function feedViewTemplate(user) {
+  const name = user?.displayName || "User";
+  const photoURL = user?.photoURL || "";
+  const initials = name
+    .split(" ")
+    .map((p) => p[0] || "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const avatarHtml = photoURL
+    ? `<img src="${photoURL}" alt="${name}" />`
+    : `<span>${initials}</span>`;
+
   return `
   <div class="feed-layout">
     <header class="top-nav">
@@ -689,16 +706,18 @@ function feedViewTemplate(user) {
 
       <section class="create-post-card">
         <div class="create-post-header">
-          <div class="post-avatar"></div>
+          <div class="post-avatar">
+            ${avatarHtml}
+          </div>
           <div>
             <div style="font-weight:600;font-size:14px;">
-              ${user?.displayName || "User"}
+              ${name}
             </div>
             <div style="font-size:12px;color:#666;">What's on your mind?</div>
           </div>
         </div>
         <form id="createPostForm">
-          <textarea id="postText" placeholder="Write something..." required></textarea>
+          <textarea id="postText" placeholder="Write something." required></textarea>
           <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
             <label style="font-size:13px;cursor:pointer;">
               📷 Media
@@ -727,6 +746,7 @@ function feedViewTemplate(user) {
   </div>
   `;
 }
+
 
 
 
@@ -1040,10 +1060,48 @@ function adminViewTemplate() {
   `;
 }
 
+
+
+
+// ... উপরের কোডগুলো
+
+// এখানে formatTime ফাংশন বসাবে
+function formatTime(value) {
+  if (!value) return "";
+
+  let date;
+  try {
+    // Firestore Timestamp হলে
+    if (value.toDate) {
+      date = value.toDate();
+    } else {
+      date = new Date(value);
+    }
+  } catch (e) {
+    date = new Date();
+  }
+
+  const now = new Date();
+  const diffMs = now - date;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return "Just now";
+  if (diffMin < 60) return diffMin + " min ago";
+  if (diffHour < 24) return diffHour + " h ago";
+  if (diffDay < 7) return diffDay + " d ago";
+
+  // এর পরে normal তারিখ দেখাই
+  return date.toLocaleDateString();
+}
+
+
+
 // ===============================
 // SINGLE POST CARD TEMPLATE (FIXED AVATAR)
 // ===============================
-
 function postCardTemplate(id, data) {
   const authorPhoto = data.authorPhotoURL || "";
 
@@ -1094,6 +1152,7 @@ function postCardTemplate(id, data) {
     </article>
   `;
 }
+
 
 
 
@@ -2588,7 +2647,6 @@ function setupCreatePostForm() {
         mediaURL = await getDownloadURL(fileRef);
         mediaType = file.type || "";
       }
-
       const postsCol = collection(db, "posts");
 
       // ⭐ এখানে currentUser.photoURL ব্যবহার করছি (signup + profile update থেকে already সেট করা)
@@ -2598,14 +2656,14 @@ function setupCreatePostForm() {
         mediaType,
         authorId: currentUser.uid,
         authorName: currentUser.displayName || "User",
-        authorPhotoURL: currentUser.photoURL || "",  // ⭐ ফিডে avatar এর জন্য
+        authorPhotoURL: currentUser.photoURL || "",  // ⭐ ফিডে avatar এর জন্য (মেইন ফিক্স)
         createdAt: serverTimestamp(),
         likesCount: 0,
         commentsCount: 0,
         savesCount: 0,
         reportsCount: 0,
       };
-
+      
       const docRef = await addDoc(postsCol, newPost);
 
       await logActivity("post_create", {
