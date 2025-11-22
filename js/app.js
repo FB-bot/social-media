@@ -212,9 +212,12 @@ function updateNavMessagesHighlight(unreadCount) {
 
 // Chat list এ unread user highlight
 // Chat list এ unread user highlight + উপরে তোলা
+// ============================================
+// HIGHLIGHT UNREAD CHATS + MOVE TO TOP
+// ============================================
 function highlightUnreadChatsFromNotifications(list) {
   const unreadSenders = new Set(
-    (list || [])
+    list
       .filter((n) => n.type === "message" && !n.isRead && n.fromUserId)
       .map((n) => n.fromUserId)
   );
@@ -222,26 +225,26 @@ function highlightUnreadChatsFromNotifications(list) {
   const container = document.getElementById("chatContactsList");
   if (!container) return;
 
-  const items = Array.from(container.querySelectorAll(".chat-list-item"));
+  const items = [...container.querySelectorAll(".chat-list-item")];
 
-  items.forEach((el) => {
-    const uid = el.dataset.uid;
-    if (uid && unreadSenders.has(uid)) {
-      el.classList.add("chat-unread");
+  items.forEach((item) => {
+    const uid = item.dataset.uid;
+
+    if (unreadSenders.has(uid)) {
+      item.classList.add("chat-unread");
     } else {
-      el.classList.remove("chat-unread");
+      item.classList.remove("chat-unread");
     }
   });
 
-  // ⭐ unread থাকা user গুলোকে উপরে নিয়ে আসি
-  // আগে unread গুলো, তারপর বাকি গুলো
+  // NEW → Move unread senders to TOP
   items
     .sort((a, b) => {
       const aUnread = a.classList.contains("chat-unread") ? 1 : 0;
       const bUnread = b.classList.contains("chat-unread") ? 1 : 0;
-      return bUnread - aUnread; // unread আগে
+      return bUnread - aUnread;
     })
-    .forEach((el) => container.appendChild(el));
+    .forEach((item) => container.appendChild(item));
 }
 
 
@@ -1514,51 +1517,79 @@ function showMessagesView() {
 
   render(messagesViewTemplate());
   setupTopNavCommon();
+
   loadChatContacts();
+
+  // ⭐ notification থেকে unread sender থাকলে সাথে সাথেই highlight
+  if (latestNotifications && latestNotifications.length) {
+    highlightUnreadChatsFromNotifications(latestNotifications);
+  }
 }
+
+
+
+////added
+
 
 async function loadChatContacts() {
   const listEl = document.getElementById("chatContactsList");
   if (!listEl || !currentUser) return;
 
-  listEl.innerHTML = "<p style='font-size:14px;color:#666;'>Loading users...</p>";
+  listEl.innerHTML =
+    "<p style='font-size:14px;color:#666;'>Loading users...</p>";
 
   try {
     const usersCol = collection(db, "users");
-    const qUsers = query(usersCol, limit(20));
+    const qUsers = query(usersCol, limit(50));
     const snap = await getDocs(qUsers);
 
     let html = "";
     for (const docSnap of snap.docs) {
       if (docSnap.id === currentUser.uid) continue;
       const data = docSnap.data();
+      const name = data.name || data.username || "User";
+      const photoURL = data.photoURL || "";
 
+      // Online/Offline status
       let statusText = "Offline";
-      let statusDotClass = "offline";
+      let statusDotColor = "#999";
       try {
         const statusSnap = await getDoc(doc(db, "status", docSnap.id));
         if (statusSnap.exists()) {
           const s = statusSnap.data();
           if (s.isOnline) {
             statusText = "Online";
-            statusDotClass = "online";
+            statusDotColor = "#31a24c";
           }
         }
       } catch (err) {}
 
+      const initials = name
+        .split(" ")
+        .map((p) => p[0] || "")
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+
+      const avatarHtml = photoURL
+        ? `<img src="${photoURL}" alt="${name}" />`
+        : `<span>${initials}</span>`;
+
       html += `
-        <div class="chat-list-item" data-user-id="${docSnap.id}" data-name="${
-        data.name || "User"
-      }" style="padding:6px 4px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.05);">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span class="status-dot ${statusDotClass}" style="width:8px;height:8px;border-radius:50%;background:${
-        statusDotClass === "online" ? "#31a24c" : "#999"
-      };"></span>
-            <div>
-              <div style="font-size:14px;font-weight:600;">${
-                data.name || "User"
-              }</div>
-              <div style="font-size:12px;color:#666;">${statusText}</div>
+        <div class="chat-list-item"
+             data-user-id="${docSnap.id}"
+             data-uid="${docSnap.id}"
+             data-name="${name}">
+          <div class="chat-list-avatar">
+            ${avatarHtml}
+          </div>
+          <div class="chat-list-main">
+            <div class="chat-list-top" style="display:flex;align-items:center;gap:6px;">
+              <span class="status-dot" style="width:8px;height:8px;border-radius:50%;background:${statusDotColor};"></span>
+              <span class="chat-list-name">${name}</span>
+            </div>
+            <div class="chat-list-bottom">
+              <span class="chat-list-preview">${statusText}</span>
             </div>
           </div>
         </div>
@@ -1569,6 +1600,7 @@ async function loadChatContacts() {
       html ||
       "<p style='font-size:14px;color:#666;'>No other users found.</p>";
 
+    // click → open chat
     listEl.addEventListener("click", (e) => {
       const item = e.target.closest(".chat-list-item");
       if (!item) return;
@@ -1576,12 +1608,22 @@ async function loadChatContacts() {
       const name = item.dataset.name;
       openChatWithUser(uid, name);
     });
+
+    // ⭐ notification list থেকে unread sender গুলা highlight করো
+    if (latestNotifications && latestNotifications.length) {
+      highlightUnreadChatsFromNotifications(latestNotifications);
+    }
   } catch (err) {
     console.error(err);
     listEl.innerHTML =
       "<p style='font-size:14px;color:red;'>Error loading users</p>";
   }
 }
+
+
+
+
+////edit
 
 async function openChatWithUser(userId, name) {
   if (!currentUser) return;
@@ -1601,8 +1643,55 @@ async function openChatWithUser(userId, name) {
   if (header) header.style.display = "flex";
   if (inputRow) inputRow.style.display = "flex";
 
-  partnerNameEl.textContent = name;
-  messagesDiv.innerHTML = "";
+  if (partnerNameEl) {
+    partnerNameEl.textContent = name || "User";
+  }
+  if (messagesDiv) {
+    messagesDiv.innerHTML = "";
+  }
+
+  // 🔵 নতুন অংশ: chat header এ avatar দেখানো
+  const headerAvatarEl = document.querySelector(".chat-header-avatar");
+  if (headerAvatarEl) {
+    headerAvatarEl.innerHTML = "";
+
+    try {
+      const userSnap = await getDoc(doc(db, "users", userId));
+      if (userSnap.exists()) {
+        const u = userSnap.data();
+        const displayName = u.name || u.username || name || "User";
+        const photoURL = u.photoURL || "";
+        const initials = displayName
+          .split(" ")
+          .map((p) => p[0] || "")
+          .join("")
+          .slice(0, 2)
+          .toUpperCase();
+
+        if (photoURL) {
+          headerAvatarEl.innerHTML = `
+            <img
+              src="${photoURL}"
+              alt="${displayName}"
+              style="width:100%;height:100%;border-radius:999px;object-fit:cover;"
+            />
+          `;
+        } else {
+          headerAvatarEl.textContent = initials;
+        }
+      } else {
+        const initialsFallback = (name || "User")
+          .split(" ")
+          .map((p) => p[0] || "")
+          .join("")
+          .slice(0, 2)
+          .toUpperCase();
+        headerAvatarEl.textContent = initialsFallback;
+      }
+    } catch (e) {
+      console.error("chat header avatar error:", e);
+    }
+  }
 
   const chatRef = doc(db, "chats", chatId);
   await setDoc(
@@ -1701,6 +1790,10 @@ async function openChatWithUser(userId, name) {
     }
   };
 }
+
+
+
+
 
 function setupTyping(chatId, partnerId) {
   const typingIndicator = document.getElementById("typingIndicator");
