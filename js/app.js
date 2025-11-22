@@ -68,6 +68,50 @@ const firebaseConfig = {
   measurementId: "G-1KGNSHJP0M"
 };
 
+
+
+
+// ==============================
+// USER INFO + AVATAR HELPERS
+// ==============================
+const userNameCache = {};
+const userPhotoCache = {};
+
+async function getUserBasicInfo(uid) {
+  if (!uid) return { name: "Unknown", photoURL: "" };
+
+  if (userNameCache[uid] && userPhotoCache[uid] !== undefined) {
+    return {
+      name: userNameCache[uid],
+      photoURL: userPhotoCache[uid],
+    };
+  }
+
+  try {
+    const ref = doc(db, "users", uid);
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      const d = snap.data();
+      const name = d.name || d.username || "Unknown";
+      const photoURL = d.photoURL || "";
+
+      userNameCache[uid] = name;
+      userPhotoCache[uid] = photoURL;
+
+      return { name, photoURL };
+    }
+  } catch (e) {
+    console.error("getUserBasicInfo error:", e);
+  }
+
+  return { name: "Unknown", photoURL: "" };
+}
+
+
+
+
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -94,6 +138,12 @@ function initTheme() {
   const saved = localStorage.getItem(THEME_KEY);
   applyTheme(saved || "light");
 }
+
+
+
+
+
+
 
 // ===============================
 // Simple SPA State
@@ -177,7 +227,7 @@ const typingTimeouts = {};
 // Message notification helpers
 // =============================
 
-const userNameCache = {}; // একবার লোড করলে আবার লোড করব না
+// একবার লোড করলে আবার লোড করব না
 
 async function getUserDisplayName(uid) {
   if (!uid) return "Someone";
@@ -212,6 +262,131 @@ function updateNavMessagesHighlight(unreadCount) {
 
 // Chat list এ unread user highlight
 // Chat list এ unread user highlight + উপরে তোলা
+
+
+
+
+
+// =============================
+// NOTIFICATIONS PANEL RENDER
+// =============================
+function ensureNotificationsPanelElement() {
+  let panel = document.getElementById("notificationsPanel");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "notificationsPanel";
+    panel.className = "notifications-panel";
+    document.body.appendChild(panel);
+  }
+  return panel;
+}
+
+async function renderNotificationsPanel() {
+  const panel = ensureNotificationsPanelElement();
+
+  if (!latestNotifications || !latestNotifications.length) {
+    panel.innerHTML = `
+      <div class="notifications-header">
+        <div>
+          <div class="notifications-header-title">Notifications</div>
+          <div class="notifications-header-sub">You're all caught up</div>
+        </div>
+      </div>
+      <div class="notifications-list">
+        <div class="notification-empty">কোনো নতুন নোটিফিকেশন নেই।</div>
+      </div>
+    `;
+    return;
+  }
+
+  // নতুন আগে রাখতে latestNotifications আগে থেকেই sort করা আছে ধরে নিচ্ছি
+
+  const itemsHtml = [];
+
+  for (const n of latestNotifications) {
+    let actorName = "Someone";
+    let actorPhoto = "";
+    if (n.fromUserId) {
+      const info = await getUserBasicInfo(n.fromUserId);
+      actorName = info.name || actorName;
+      actorPhoto = info.photoURL || "";
+    }
+
+    let title = "";
+    let text = "";
+    const preview = n.previewText || "";
+
+    if (n.type === "like") {
+      title = `${actorName} liked your post`;
+      text = preview ? `“${preview}”` : "";
+    } else if (n.type === "comment") {
+      title = `${actorName} commented on your post`;
+      text = preview ? `“${preview}”` : "";
+    } else if (n.type === "follow") {
+      title = `${actorName} started following you`;
+      text = "";
+    } else if (n.type === "message") {
+      title = `${actorName} sent you a message`;
+      text = preview ? `“${preview}”` : "";
+    } else {
+      title = `Activity from ${actorName}`;
+      text = preview ? `“${preview}”` : "";
+    }
+
+    let timeText = "";
+    try {
+      if (n.createdAt && typeof n.createdAt.toDate === "function") {
+        timeText = formatDate(n.createdAt);
+      }
+    } catch (e) {}
+
+    const initials = actorName
+      .split(" ")
+      .map((p) => p[0] || "")
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+    const avatarHtml = actorPhoto
+      ? `<img src="${actorPhoto}" alt="${actorName}" />`
+      : `<span>${initials}</span>`;
+
+    itemsHtml.push(`
+      <div class="notification-item ${n.isRead ? "" : "unread"}">
+        <div class="notification-avatar">
+          ${avatarHtml}
+        </div>
+        <div class="notification-main">
+          <div class="notification-title">${title}</div>
+          ${
+            text
+              ? `<div class="notification-text">${text}</div>`
+              : ""
+          }
+          ${
+            timeText
+              ? `<div class="notification-time">${timeText}</div>`
+              : ""
+          }
+        </div>
+      </div>
+    `);
+  }
+
+  panel.innerHTML = `
+    <div class="notifications-header">
+      <div>
+        <div class="notifications-header-title">Notifications</div>
+        <div class="notifications-header-sub">Latest activity</div>
+      </div>
+    </div>
+    <div class="notifications-list">
+      ${itemsHtml.join("")}
+    </div>
+  `;
+}
+
+
 // ============================================
 // HIGHLIGHT UNREAD CHATS + MOVE TO TOP
 // ============================================
@@ -1115,52 +1290,45 @@ function setupTopNavCommon() {
   });
 
   // 🔔 Notifications বাটন – এখন নামও দেখাবে
+
+
   document
     .getElementById("navNotifications")
-    ?.addEventListener("click", async () => {
+    ?.addEventListener("click", async (e) => {
+      e.stopPropagation();
       if (!currentUser) return;
 
-      if (!latestNotifications.length) {
-        alert("কোনো নতুন নোটিফিকেশন নেই।");
+      const panel = ensureNotificationsPanelElement();
+
+      // Panel already open থাকলে → বন্ধ করে দিচ্ছি
+      if (panel.classList.contains("open")) {
+        panel.classList.remove("open");
         return;
       }
 
-      const lines = [];
+      // নতুন করে render করে ওপেন করো
+      await renderNotificationsPanel();
+      panel.classList.add("open");
 
-      for (const n of latestNotifications) {
-        let msg = "";
-        if (n.type === "like") {
-          msg = "Someone liked your post";
-        } else if (n.type === "comment") {
-          msg = "Someone commented on your post";
-        } else if (n.type === "follow") {
-          msg = "Someone started following you";
-        } else if (n.type === "message") {
-          let name = "Someone";
-          if (n.fromUserId) {
-            name = await getUserDisplayName(n.fromUserId);
-          }
-          msg = `${name} sent you a message`;
-        } else {
-          msg = "Activity";
-        }
-
-        if (n.previewText) {
-          msg += `: "${n.previewText}"`;
-        }
-
-        lines.push("• " + msg);
+      // সব notification read করে দেই
+      try {
+        await markAllNotificationsRead(currentUser.uid);
+      } catch (err) {
+        console.error("markAllNotificationsRead error:", err);
       }
 
-      alert("🔔 Notifications:\n\n" + lines.join("\n"));
-
-      await markAllNotificationsRead(currentUser.uid);
-
-      // সব read হয়ে গেলে highlight off
+      // badge / highlight আপডেট করি
       updateNavNotificationBadge(0);
       updateNavMessagesHighlight(0);
-      highlightUnreadChatsFromNotifications([]);
+      highlightUnreadChatsFromNotifications(latestNotifications);
     });
+
+
+
+
+
+
+
 
   document.getElementById("navSearch")?.addEventListener("click", () => {
     showSearchView();
