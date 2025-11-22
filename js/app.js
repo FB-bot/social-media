@@ -272,42 +272,91 @@ function updateNavMessagesHighlight(unreadCount) {
 // =============================
 // NOTIFICATIONS PANEL RENDER
 // =============================
+// ===============================
+// Notifications panel create / reuse (with Close button)
+// ===============================
 function ensureNotificationsPanelElement() {
   let panel = document.getElementById("notificationsPanel");
   if (!panel) {
     panel = document.createElement("div");
     panel.id = "notificationsPanel";
-    panel.className = "notifications-panel";
+    panel.className = "notifications-panel-backdrop";
+
+    panel.innerHTML = `
+      <div class="notifications-panel">
+        <div class="notifications-panel-header">
+          <span>Notifications</span>
+          <button type="button" id="notificationsPanelClose" class="notifications-close-btn">✕</button>
+        </div>
+        <div id="notificationsPanelBody" class="notifications-panel-body">
+          <!-- notifications list এখানে render হবে -->
+        </div>
+      </div>
+    `;
+
     document.body.appendChild(panel);
+
+    // বাইরে কালো অংশে ক্লিক করলে panel বন্ধ হবে
+    panel.addEventListener("click", (e) => {
+      if (e.target === panel) {
+        panel.classList.remove("open");
+      }
+    });
+
+    // Cross (✕) বাটনে ক্লিক করলে panel বন্ধ হবে
+    const closeBtn = panel.querySelector("#notificationsPanelClose");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => {
+        panel.classList.remove("open");
+      });
+    }
   }
+
   return panel;
 }
+
+/// edit
+
 
 async function renderNotificationsPanel() {
   const panel = ensureNotificationsPanelElement();
 
+  // === HEADER WITH CLOSE BUTTON ===
+  let headerHtml = `
+    <div class="notifications-header">
+      <div>
+        <div class="notifications-header-title">Notifications</div>
+        <div class="notifications-header-sub">Latest activity</div>
+      </div>
+
+      <!-- ❌ Close Button -->
+      <button id="notificationsCloseBtn" class="notifications-close-btn">✕</button>
+    </div>
+  `;
+
+  // === EMPTY CASE ===
   if (!latestNotifications || !latestNotifications.length) {
     panel.innerHTML = `
-      <div class="notifications-header">
-        <div>
-          <div class="notifications-header-title">Notifications</div>
-          <div class="notifications-header-sub">You're all caught up</div>
-        </div>
-      </div>
+      ${headerHtml}
       <div class="notifications-list">
         <div class="notification-empty">কোনো নতুন নোটিফিকেশন নেই।</div>
       </div>
     `;
+
+    document.getElementById("notificationsCloseBtn").onclick = () => {
+      panel.classList.remove("open");
+    };
+
     return;
   }
 
-  // নতুন আগে রাখতে latestNotifications আগে থেকেই sort করা আছে ধরে নিচ্ছি
-
+  // === BUILD LIST ===
   const itemsHtml = [];
 
   for (const n of latestNotifications) {
     let actorName = "Someone";
     let actorPhoto = "";
+
     if (n.fromUserId) {
       const info = await getUserBasicInfo(n.fromUserId);
       actorName = info.name || actorName;
@@ -315,78 +364,51 @@ async function renderNotificationsPanel() {
     }
 
     let title = "";
-    let text = "";
-    const preview = n.previewText || "";
+    let text = n.previewText ? `“${n.previewText}”` : "";
 
-    if (n.type === "like") {
-      title = `${actorName} liked your post`;
-      text = preview ? `“${preview}”` : "";
-    } else if (n.type === "comment") {
-      title = `${actorName} commented on your post`;
-      text = preview ? `“${preview}”` : "";
-    } else if (n.type === "follow") {
-      title = `${actorName} started following you`;
-      text = "";
-    } else if (n.type === "message") {
-      title = `${actorName} sent you a message`;
-      text = preview ? `“${preview}”` : "";
-    } else {
-      title = `Activity from ${actorName}`;
-      text = preview ? `“${preview}”` : "";
-    }
+    if (n.type === "like") title = `${actorName} liked your post`;
+    else if (n.type === "comment") title = `${actorName} commented on your post`;
+    else if (n.type === "follow") title = `${actorName} started following you`;
+    else if (n.type === "message") title = `${actorName} sent you a message`;
+    else title = `Activity from ${actorName}`;
 
     let timeText = "";
     try {
-      if (n.createdAt && typeof n.createdAt.toDate === "function") {
+      if (n.createdAt?.toDate) {
         timeText = formatDate(n.createdAt);
       }
-    } catch (e) {}
+    } catch {}
 
-    const initials = actorName
-      .split(" ")
-      .map((p) => p[0] || "")
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-
-    const avatarHtml = actorPhoto
+    const avatar = actorPhoto
       ? `<img src="${actorPhoto}" alt="${actorName}" />`
-      : `<span>${initials}</span>`;
+      : `<span>${actorName[0]}</span>`;
 
     itemsHtml.push(`
       <div class="notification-item ${n.isRead ? "" : "unread"}">
-        <div class="notification-avatar">
-          ${avatarHtml}
-        </div>
+        <div class="notification-avatar">${avatar}</div>
         <div class="notification-main">
           <div class="notification-title">${title}</div>
-          ${
-            text
-              ? `<div class="notification-text">${text}</div>`
-              : ""
-          }
-          ${
-            timeText
-              ? `<div class="notification-time">${timeText}</div>`
-              : ""
-          }
+          ${text ? `<div class="notification-text">${text}</div>` : ""}
+          ${timeText ? `<div class="notification-time">${timeText}</div>` : ""}
         </div>
       </div>
     `);
   }
 
+  // === FINAL HTML ===
   panel.innerHTML = `
-    <div class="notifications-header">
-      <div>
-        <div class="notifications-header-title">Notifications</div>
-        <div class="notifications-header-sub">Latest activity</div>
-      </div>
-    </div>
+    ${headerHtml}
     <div class="notifications-list">
       ${itemsHtml.join("")}
     </div>
   `;
+
+  // === Close Button Event ===
+  document.getElementById("notificationsCloseBtn").onclick = () => {
+    panel.classList.remove("open");
+  };
 }
+
 
 
 // ============================================
