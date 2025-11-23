@@ -278,54 +278,12 @@ function updateNavMessagesHighlight(unreadCount) {
 // ===============================
 // Notifications panel (backdrop + card + header with close)
 // ===============================
-function ensureNotificationsPanelElement() {
-  let backdrop = document.getElementById("notificationsPanel");
-  if (!backdrop) {
-    // backdrop = dark overlay
-    backdrop = document.createElement("div");
-    backdrop.id = "notificationsPanel";
-    backdrop.className = "notifications-panel-backdrop";
 
-    // ভিতরের card + header + body
-    backdrop.innerHTML = `
-      <div class="notifications-panel-card">
-        <div class="notifications-panel-header">
-          <span class="notifications-panel-title">Notifications</span>
-          <button
-            type="button"
-            id="notificationsPanelClose"
-            class="notifications-close-btn"
-            aria-label="Close notifications"
-          >
-            ✕
-          </button>
-        </div>
-        <div id="notificationsPanelBody" class="notifications-panel-body">
-          <!-- notifications list এখানে আসবে -->
-        </div>
-      </div>
-    `;
 
-    document.body.appendChild(backdrop);
 
-    // বাইরে (ডার্ক ব্যাকগ্রাউন্ডে) ক্লিক করলে বন্ধ
-    backdrop.addEventListener("click", (e) => {
-      if (e.target === backdrop) {
-        backdrop.classList.remove("open");
-      }
-    });
 
-    // Cross বাটনে ক্লিক করলে বন্ধ
-    const closeBtn = backdrop.querySelector("#notificationsPanelClose");
-    if (closeBtn) {
-      closeBtn.addEventListener("click", () => {
-        backdrop.classList.remove("open");
-      });
-    }
-  }
 
-  return backdrop;
-}
+
 
 
 /// edit
@@ -334,75 +292,6 @@ function ensureNotificationsPanelElement() {
 // ===============================
 // Notifications list render only inside #notificationsPanelBody
 // ===============================
-async function renderNotificationsPanel() {
-  const backdrop = ensureNotificationsPanelElement();
-  const body = document.getElementById("notificationsPanelBody");
-  if (!body) return;
-
-  // কোনো notification না থাকলে
-  if (!latestNotifications || !latestNotifications.length) {
-    body.innerHTML = `
-      <div class="notifications-empty">
-        কোনো নতুন নোটিফিকেশন নেই।
-      </div>
-    `;
-    return;
-  }
-
-  const itemsHtml = [];
-
-  for (const n of latestNotifications) {
-    let actorName = "Someone";
-    let actorPhoto = "";
-
-    if (n.fromUserId) {
-      try {
-        const info = await getUserBasicInfo(n.fromUserId);
-        if (info) {
-          actorName = info.name || actorName;
-          actorPhoto = info.photoURL || actorPhoto;
-        }
-      } catch (e) {
-        console.error("getUserBasicInfo error:", e);
-      }
-    }
-
-    let title;
-    if (n.type === "like") title = `${actorName} liked your post`;
-    else if (n.type === "comment") title = `${actorName} commented on your post`;
-    else if (n.type === "follow") title = `${actorName} started following you`;
-    else if (n.type === "message") title = `${actorName} sent you a message`;
-    else title = `Activity from ${actorName}`;
-
-    const preview = n.previewText || "";
-    let timeText = "";
-    try {
-      if (n.createdAt && typeof n.createdAt.toDate === "function") {
-        timeText = formatDate(n.createdAt);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-
-    const avatar = actorPhoto
-      ? `<img src="${actorPhoto}" alt="${actorName}" />`
-      : `<span>${(actorName[0] || "U").toUpperCase()}</span>`;
-
-    itemsHtml.push(`
-      <div class="notification-item ${n.isRead ? "" : "unread"}">
-        <div class="notification-avatar">${avatar}</div>
-        <div class="notification-main">
-          <div class="notification-title">${title}</div>
-          ${preview ? `<div class="notification-text">${preview}</div>` : ""}
-          ${timeText ? `<div class="notification-time">${timeText}</div>` : ""}
-        </div>
-      </div>
-    `);
-  }
-
-  // শুধু body অংশে লিস্ট বসাচ্ছি (header ওভাররাইট হবে না)
-  body.innerHTML = itemsHtml.join("");
-}
 
 
 
@@ -1319,6 +1208,207 @@ function startPresenceTracking() {
 // Top Nav (Common)
 // ===============================
 
+
+// ===============================
+// Notifications Panel (FINAL VERSION)
+// ===============================
+function ensureNotificationsPanelElement() {
+  let panel = document.getElementById("notificationsPanel");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "notificationsPanel";
+    panel.className = "notifications-panel-backdrop";
+
+    panel.innerHTML = `
+      <div class="notifications-panel-card">
+        <div class="notifications-panel-header">
+          <span class="notifications-panel-title">Notifications</span>
+          <button
+            type="button"
+            id="notificationsPanelClose"
+            class="notifications-close-btn"
+            aria-label="Close notifications"
+          >
+            ✕
+          </button>
+        </div>
+        <div id="notificationsPanelBody" class="notifications-panel-body">
+          <!-- notifications list here -->
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(panel);
+
+    // বাইরে কালো অংশে ক্লিক করলে panel বন্ধ
+    panel.addEventListener("click", (e) => {
+      if (e.target === panel) {
+        panel.classList.remove("open");
+      }
+    });
+
+    // Cross বাটনে ক্লিক করলে panel বন্ধ
+    const closeBtn = panel.querySelector("#notificationsPanelClose");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => {
+        panel.classList.remove("open");
+      });
+    }
+  }
+
+  return panel;
+}
+
+
+
+////edit
+
+
+
+// ===============================
+// Notifications list render + click → navigate
+// ===============================
+async function renderNotificationsPanel() {
+  const panel = ensureNotificationsPanelElement();
+  const body = document.getElementById("notificationsPanelBody");
+  if (!body) return;
+
+  // কোনো notification না থাকলে
+  if (!latestNotifications || !latestNotifications.length) {
+    body.innerHTML = `
+      <div class="notifications-empty">
+        কোনো নতুন নোটিফিকেশন নেই।
+      </div>
+    `;
+    return;
+  }
+
+  const itemsHtml = [];
+
+  for (const n of latestNotifications) {
+    let actorName = "Someone";
+    let actorPhoto = "";
+
+    if (n.fromUserId) {
+      try {
+        const info = await getUserBasicInfo(n.fromUserId);
+        if (info) {
+          actorName = info.name || actorName;
+          actorPhoto = info.photoURL || "";
+        }
+      } catch (e) {
+        console.error("getUserBasicInfo error:", e);
+      }
+    }
+
+    let title;
+    if (n.type === "like") title = `${actorName} liked your post`;
+    else if (n.type === "comment") title = `${actorName} commented on your post`;
+    else if (n.type === "follow") title = `${actorName} started following you`;
+    else if (n.type === "message") title = `${actorName} sent you a message`;
+    else title = `Activity from ${actorName}`;
+
+    const preview = n.previewText || "";
+    let timeText = "";
+    try {
+      if (n.createdAt && typeof n.createdAt.toDate === "function") {
+        timeText = formatDate(n.createdAt);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    const initials = actorName
+      .split(" ")
+      .map((p) => p[0] || "")
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+    const avatar = actorPhoto
+      ? `<img src="${actorPhoto}" alt="${actorName}" />`
+      : `<span>${initials}</span>`;
+
+    itemsHtml.push(`
+      <div class="notification-item ${n.isRead ? "" : "unread"}"
+           data-type="${n.type || ""}"
+           data-post-id="${n.postId || ""}"
+           data-from-user-id="${n.fromUserId || ""}"
+           data-from-name="${actorName}">
+        <div class="notification-avatar">
+          ${avatar}
+        </div>
+        <div class="notification-main">
+          <div class="notification-title">${title}</div>
+          ${
+            preview
+              ? `<div class="notification-text">${preview}</div>`
+              : ""
+          }
+          ${
+            timeText
+              ? `<div class="notification-time">${timeText}</div>`
+              : ""
+          }
+        </div>
+      </div>
+    `);
+  }
+
+  body.innerHTML = itemsHtml.join("");
+
+  // 🔗 Notification item click → Navigate
+  body.onclick = (e) => {
+    const item = e.target.closest(".notification-item");
+    if (!item) return;
+
+    const type = item.dataset.type;
+    const postId = item.dataset.postId;
+    const fromUserId = item.dataset.fromUserId;
+    const fromUserName = item.dataset.fromName || "";
+
+    // Panel বন্ধ
+    panel.classList.remove("open");
+
+    // 🟢 Message notification → Messages view + ওই user এর chat
+    if (type === "message" && fromUserId) {
+      showMessagesView();
+      setTimeout(() => {
+        // 2nd parameter হিসেবে নাম পাঠাচ্ছি
+        openChatWithUser(fromUserId, fromUserName);
+      }, 200);
+      return;
+    }
+
+    // 🟢 Like / Comment → Feed view + নির্দিষ্ট post scroll + highlight
+    if ((type === "like" || type === "comment") && postId) {
+      showFeedView();
+      setTimeout(() => {
+        const card = document.querySelector(
+          `.post-card[data-id="${postId}"]`
+        );
+        if (card) {
+          card.scrollIntoView({ behavior: "smooth", block: "center" });
+          const oldShadow = card.style.boxShadow;
+          card.style.boxShadow = "0 0 0 2px #2563eb";
+          setTimeout(() => {
+            card.style.boxShadow = oldShadow || "";
+          }, 2000);
+        }
+      }, 400);
+      return;
+    }
+
+    // 🟢 Follow → profile view
+    if (type === "follow" && fromUserId) {
+      showProfileView(fromUserId);
+      return;
+    }
+
+    // অন্য কিছু হলে default feed
+    showFeedView();
+  };
+}
 
 
 
