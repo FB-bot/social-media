@@ -1974,3 +1974,613 @@ body.dark-theme .notification-text {
   color: #9ca3af;
   margin-top: 2px;
 }
+
+
+
+/* =============================
+   LIKE & COMMENT UI UPDATE
+============================= */
+
+/* Post actions row */
+.post-actions {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Action button base */
+.post-actions button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  background: #f9fafb;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease,
+    transform 0.08s ease, box-shadow 0.12s ease;
+}
+
+.post-actions button:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18);
+}
+
+body.dark-theme .post-actions button {
+  background: #020617;
+  border-color: rgba(148, 163, 184, 0.9);
+  color: #e5e7eb;
+}
+
+body.dark-theme .post-actions button:hover {
+  background: #1d4ed8;
+}
+
+/* Like button (ধরি class="like-btn") */
+.post-actions .like-btn::before {
+  content: "♡";
+  font-size: 14px;
+  transform: translateY(1px);
+}
+
+/* liked অবস্থা */
+.post-actions .like-btn.liked {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #b91c1c;
+}
+
+body.dark-theme .post-actions .like-btn.liked {
+  background: #7f1d1d;
+  border-color: #fecaca;
+  color: #fee2e2;
+}
+
+.post-actions .like-btn.liked::before {
+  content: "❤";
+}
+
+/* Comment button (ধরি class="comment-btn") */
+.post-actions .comment-btn::before {
+  content: "💬";
+  font-size: 14px;
+}
+
+/* Save button (class="save-btn") */
+.post-actions .save-btn::before {
+  content: "🔖";
+  font-size: 14px;
+}
+
+.post-actions .save-btn.saved {
+  background: #e0f2fe;
+  border-color: #0ea5e9;
+  color: #0369a1;
+}
+
+/* Share button (class="share-btn") */
+.post-actions .share-btn::before {
+  content: "📤";
+  font-size: 14px;
+}
+
+/* =============================
+   COMMENTS UI
+============================= */
+
+.comments-section {
+  margin-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.4);
+  padding-top: 8px;
+}
+
+.comments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.comments-header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.comments-count {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Comment list */
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.comment-item {
+  display: flex;
+  gap: 8px;
+}
+
+.comment-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e5e7eb;
+  flex-shrink: 0;
+}
+
+.comment-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+body.dark-theme .comment-avatar {
+  background: #111827;
+}
+
+.comment-body {
+  background: #f3f4f6;
+  padding: 6px 8px;
+  border-radius: 10px;
+  max-width: 100%;
+}
+
+body.dark-theme .comment-body {
+  background: #020617;
+}
+
+.comment-author {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.comment-text {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.comment-meta {
+  margin-top: 2px;
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+/* Reply একটু ডানে */
+.comment-item.reply {
+  margin-left: 24px;
+}
+
+/* Comment input row */
+.comment-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.comment-input-row input {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.8);
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+  background: #ffffff;
+}
+
+body.dark-theme .comment-input-row input {
+  background: #020617;
+  border-color: rgba(148, 163, 184, 0.9);
+  color: #e5e7eb;
+}
+
+.comment-input-row input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
+}
+
+.comment-input-row button {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: none;
+  background: #2563eb;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.comment-input-row button:hover {
+  background: #1d4ed8;
+}
+
+
+/* =============================
+   COMMENTS UI UPDATE
+============================= */
+
+.comments-section {
+  margin-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+  padding-top: 8px;
+}
+
+.comments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.comments-header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.comments-count {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* View all / hide button */
+.comments-view-toggle {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: #2563eb;
+  padding: 0;
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+/* Comment list */
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: hidden;
+}
+
+/* প্রথমে collapsed অবস্থায় ৩টার বেশি লুকায় */
+.comments-list.collapsed .comment-item:nth-child(n + 4) {
+  display: none;
+}
+
+.comment-item {
+  display: flex;
+  gap: 8px;
+}
+
+.comment-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e5e7eb;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.comment-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+body.dark-theme .comment-avatar {
+  background: #111827;
+  color: #e5e7eb;
+}
+
+.comment-body {
+  background: #f3f4f6;
+  padding: 6px 8px;
+  border-radius: 10px;
+  max-width: 100%;
+}
+
+body.dark-theme .comment-body {
+  background: #020617;
+}
+
+.comment-author {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  cursor: pointer;
+}
+
+.comment-text {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.comment-meta-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.comment-meta-time {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.comment-meta-reply {
+  font-size: 10px;
+  font-weight: 600;
+  color: #2563eb;
+  cursor: pointer;
+}
+
+/* Reply একটু ডানে */
+.comment-item.reply {
+  margin-left: 24px;
+}
+
+/* Comment input row (লিস্টের নিচে থাকবে) */
+.comment-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.comment-input-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e5e7eb;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.comment-input-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+body.dark-theme .comment-input-avatar {
+  background: #111827;
+  color: #e5e7eb;
+}
+
+.comment-input-row input {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.8);
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+  background: #ffffff;
+}
+
+body.dark-theme .comment-input-row input {
+  background: #020617;
+  border-color: rgba(148, 163, 184, 0.9);
+  color: #e5e7eb;
+}
+
+.comment-input-row input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
+}
+
+.comment-input-row button {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: none;
+  background: #2563eb;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.comment-input-row button:hover {
+  background: #1d4ed8;
+}
+
+
+
+
+
+/* =============================
+   COMMENTS UI (Updated)
+============================= */
+
+.post-comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* ডিফল্টে ৩টার বেশি কমেন্ট লুকাবে */
+.post-comments-list .comment-item.comment-hidden {
+  display: none;
+}
+
+/* show-all ক্লাস থাকলে সব দেখাবে */
+.post-comments-list.show-all .comment-item.comment-hidden {
+  display: flex;
+}
+
+.comments-empty {
+  font-size: 12px;
+  color: #666;
+}
+
+.comment-item {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.comment-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e5e7eb;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.comment-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+body.dark-theme .comment-avatar {
+  background: #111827;
+  color: #e5e7eb;
+}
+
+.comment-body {
+  background: #f3f4f6;
+  padding: 6px 8px;
+  border-radius: 10px;
+  max-width: 100%;
+}
+
+body.dark-theme .comment-body {
+  background: #020617;
+}
+
+.comment-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.comment-author {
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.comment-time {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.comment-text {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* View all button */
+.comments-view-toggle {
+  margin-top: 4px;
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: #2563eb;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Inline comment form */
+.inline-comment-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.comment-input-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e5e7eb;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.comment-input-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+body.dark-theme .comment-input-avatar {
+  background: #111827;
+  color: #e5e7eb;
+}
+
+.inline-comment-input {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.8);
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+  background: #ffffff;
+}
+
+body.dark-theme .inline-comment-input {
+  background: #020617;
+  border-color: rgba(148, 163, 184, 0.9);
+  color: #e5e7eb;
+}
+
+.inline-comment-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
+}
+
+.inline-comment-send {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: none;
+  background: #2563eb;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.inline-comment-send:hover {
+  background: #1d4ed8;
+}
