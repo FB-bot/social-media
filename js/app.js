@@ -727,8 +727,7 @@ function messagesViewTemplate() {
 }
 
 
-
-
+///
 
 function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
   const createdAt = userData.createdAt?.toDate
@@ -745,6 +744,9 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
   const bio = userData.bio || "";
   const photoURL = userData.photoURL || "";
   const coverPhotoURL = userData.coverPhotoURL || "";
+
+  const address = userData.address || "";
+  const relationshipStatus = userData.relationshipStatus || "";
 
   const suggestionsHtml = suggestions
     .map(
@@ -767,6 +769,10 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
     )
     .join("");
 
+  const postsTitle = isCurrentUser
+    ? "Your posts"
+    : `${userData.name || "User"}’s posts`;
+
   return `
   <div class="profile-layout">
     <header class="top-nav">
@@ -777,6 +783,7 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
     </header>
 
     <main class="feed-main">
+      <!-- Top cover + avatar -->
       <section class="profile-main-card">
         <div class="profile-cover">
           ${
@@ -808,38 +815,95 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
             ${
               isCurrentUser
                 ? `<button id="editProfileBtn">Edit Profile</button>`
-                : `<button id="followBtnMain">Follow</button>`
+                : `
+                  <button id="followBtnMain">Follow</button>
+                  <button id="messageBtnMain" class="profile-edit-btn">Message</button>
+                `
             }
           </div>
         </div>
       </section>
 
+      <!-- About + Bio + extra info -->
       <section class="profile-main-card">
-        <h3 style="margin-bottom:6px;">Bio</h3>
-        <p class="profile-bio">${bio || "No bio yet."}</p>
+        <h3 style="margin-bottom:8px;">About</h3>
+
+        <p class="profile-bio" style="margin-bottom:10px;">
+          ${bio || "No bio yet."}
+        </p>
+
+        <div class="profile-about-extra" style="display:flex;flex-direction:column;gap:6px;font-size:14px;">
+          <div style="display:flex;justify-content:space-between;">
+            <span>📍 Address</span>
+            <span style="font-weight:500;">${
+              address || "Not added"
+            }</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>❤️ Relationship</span>
+            <span style="font-weight:500;">${
+              relationshipStatus || "Not added"
+            }</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>📅 Joined</span>
+            <span style="font-weight:500;">${joinDateText}</span>
+          </div>
+        </div>
 
         ${
           isCurrentUser
             ? `
-          <div id="profileEditArea" style="display:none;margin-top:10px;">
-            <h4 style="margin-bottom:4px;">Edit Profile</h4>
+          <div id="profileEditArea" style="display:none;margin-top:12px;">
+            <h4 style="margin-bottom:6px;">Edit Profile</h4>
             <form id="profileEditForm" class="profile-edit-form">
-              <input type="text" id="editName" placeholder="Full name" value="${
-                userData.name || ""
-              }" />
-              <input type="text" id="editUsername" placeholder="Username" value="${
-                userData.username || ""
-              }" />
-              <textarea id="editBio" placeholder="Bio">${
-                userData.bio || ""
-              }</textarea>
-              <input type="text" id="editPhotoURL" placeholder="Profile photo URL" value="${
-                userData.photoURL || ""
-              }" />
-              <input type="text" id="editCoverURL" placeholder="Cover photo URL" value="${
-                userData.coverPhotoURL || ""
-              }" />
-              <button type="submit" class="post-submit-btn" style="margin-top:6px;">Save changes</button>
+              <input
+                type="text"
+                id="editName"
+                placeholder="Full name"
+                value="${userData.name || ""}"
+              />
+              <input
+                type="text"
+                id="editUsername"
+                placeholder="Username"
+                value="${userData.username || ""}"
+              />
+              <textarea
+                id="editBio"
+                placeholder="Bio"
+              >${bio}</textarea>
+              <input
+                type="text"
+                id="editPhotoURL"
+                placeholder="Profile photo URL"
+                value="${photoURL}"
+              />
+              <input
+                type="text"
+                id="editCoverURL"
+                placeholder="Cover photo URL"
+                value="${coverPhotoURL}"
+              />
+              <input
+                type="text"
+                id="editAddress"
+                placeholder="Address"
+                value="${address}"
+              />
+              <input
+                type="text"
+                id="editRelationship"
+                placeholder="Relationship status"
+                value="${relationshipStatus}"
+              />
+              <button
+                type="submit"
+                class="post-submit-btn"
+                style="margin-top:8px;"
+              >
+                Save changes
+              </button>
             </form>
           </div>
         `
@@ -847,6 +911,15 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
         }
       </section>
 
+      <!-- Posts section -->
+      <section class="profile-main-card">
+        <h3 style="margin-bottom:8px;">${postsTitle}</h3>
+        <div id="profilePostsList">
+          <p style="font-size:14px;color:#666;">Loading posts...</p>
+        </div>
+      </section>
+
+      <!-- People you may know -->
       <section class="profile-main-card">
         <h3>People you may know</h3>
         <div class="suggested-users-list" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
@@ -860,6 +933,10 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
   </div>
   `;
 }
+
+
+
+
 
 function searchViewTemplate() {
   return `
@@ -2202,6 +2279,9 @@ async function markIncomingMessagesAsSeen(chatId, partnerId, snap) {
 // Profile View
 // ===============================
 
+// ===============================
+// Profile View
+// ===============================
 async function showProfileView(userId) {
   if (!currentUser) {
     showLoginView();
@@ -2220,6 +2300,7 @@ async function showProfileView(userId) {
     const userData = userSnap.data();
     const isCurrentUser = currentUser.uid === userId;
 
+    // Suggestions
     const suggestions = [];
     const usersCol = collection(db, "users");
     const qUsers = query(usersCol, limit(10));
@@ -2232,64 +2313,93 @@ async function showProfileView(userId) {
     render(profileViewTemplate(userData, isCurrentUser, suggestions.slice(0, 5)));
     setupTopNavCommon();
 
+    // নিজের প্রোফাইল হলে: edit form
     if (isCurrentUser) {
       const editBtn = document.getElementById("editProfileBtn");
       const editArea = document.getElementById("profileEditArea");
       const editForm = document.getElementById("profileEditForm");
 
-      editBtn?.addEventListener("click", () => {
-        if (!editArea) return;
-        const isHidden =
-          editArea.style.display === "none" || !editArea.style.display;
-        editArea.style.display = isHidden ? "block" : "none";
-      });
+      if (editBtn && editArea && editForm) {
+        editBtn.addEventListener("click", () => {
+          editArea.style.display =
+            editArea.style.display === "none" || !editArea.style.display
+              ? "block"
+              : "none";
+        });
 
-      editForm?.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const name = document.getElementById("editName").value.trim();
-        const username = document
-          .getElementById("editUsername")
-          .value.trim();
-        const bio = document.getElementById("editBio").value.trim();
-        const photoURL = document
-          .getElementById("editPhotoURL")
-          .value.trim();
-        const coverPhotoURL = document
-          .getElementById("editCoverURL")
-          .value.trim();
+        editForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
 
-        try {
-          await updateDoc(userRef, {
-            name,
-            username,
-            bio,
-            photoURL,
-            coverPhotoURL,
-          });
+          const name = document.getElementById("editName").value.trim();
+          const username = document
+            .getElementById("editUsername")
+            .value.trim();
+          const bio = document.getElementById("editBio").value.trim();
+          const photoURL = document
+            .getElementById("editPhotoURL")
+            .value.trim();
+          const coverPhotoURL = document
+            .getElementById("editCoverURL")
+            .value.trim();
+          const address = document
+            .getElementById("editAddress")
+            .value.trim();
+          const relationshipStatus = document
+            .getElementById("editRelationship")
+            .value.trim();
 
-          if (name && currentUser.displayName !== name) {
-            await updateProfile(currentUser, { displayName: name });
+          try {
+            await updateDoc(userRef, {
+              name,
+              username,
+              bio,
+              photoURL,
+              coverPhotoURL,
+              address,
+              relationshipStatus,
+            });
+
+            // Firebase Auth profile আপডেট
+            if (name && currentUser.displayName !== name) {
+              await updateProfile(currentUser, { displayName: name });
+            }
+            if (photoURL && currentUser.photoURL !== photoURL) {
+              await updateProfile(currentUser, { photoURL });
+            }
+
+            await logActivity("profile_update", {});
+
+            alert("Profile updated!");
+            showProfileView(userId);
+          } catch (err) {
+            console.error(err);
+            alert("Update error: " + err.message);
           }
-          if (photoURL && currentUser.photoURL !== photoURL) {
-            await updateProfile(currentUser, { photoURL });
-          }
-
-          await logActivity("profile_update", {});
-
-          alert("Profile updated!");
-          showProfileView(userId);
-        } catch (err) {
-          console.error(err);
-          alert("Update error: " + err.message);
-        }
-      });
+        });
+      }
     } else {
+      // অন্যের প্রোফাইল – Follow + Message
       const followBtnMain = document.getElementById("followBtnMain");
       if (followBtnMain) {
         setupFollowButton(userId, followBtnMain);
       }
+
+      const messageBtnMain = document.getElementById("messageBtnMain");
+      if (messageBtnMain) {
+        messageBtnMain.addEventListener("click", () => {
+          const displayName =
+            userData.name || userData.username || "User";
+          showMessagesView();
+          setTimeout(() => {
+            if (typeof openChatWithUser === "function") {
+              openChatWithUser(userId, displayName);
+            }
+          }, 200);
+        });
+      }
     }
 
+    // "People you may know" click
     document
       .querySelector(".suggested-users-list")
       ?.addEventListener("click", (e) => {
@@ -2304,12 +2414,96 @@ async function showProfileView(userId) {
           showProfileView(targetId);
         }
       });
+
+    // 🔹 প্রোফাইল পোস্ট লোড করা
+    await loadProfilePosts(userId);
   } catch (err) {
     console.error(err);
     alert("Profile load error");
     showFeedView();
   }
 }
+
+
+
+// ===============================
+// Profile posts loader
+// ===============================
+async function loadProfilePosts(userId) {
+  const listEl = document.getElementById("profilePostsList");
+  if (!listEl) return;
+
+  listEl.innerHTML =
+    "<p style='font-size:14px;color:#666;'>Loading posts...</p>";
+
+  try {
+    const postsCol = collection(db, "posts");
+    const qPosts = query(
+      postsCol,
+      where("authorId", "==", userId),
+      orderBy("createdAt", "desc"),
+      limit(20)
+    );
+    const snap = await getDocs(qPosts);
+
+    if (snap.empty) {
+      listEl.innerHTML =
+        "<p style='font-size:14px;color:#666;'>This user has not posted anything yet.</p>";
+      return;
+    }
+
+    let html = "";
+    snap.forEach((docSnap) => {
+      html += postCardTemplate(docSnap.id, docSnap.data());
+    });
+
+    listEl.innerHTML = html;
+
+    // প্রতিটি পোস্টের জন্য comments realtime listener
+    snap.forEach((docSnap) => {
+      attachCommentsListenerToPost(docSnap.id);
+    });
+
+    // একই feed-এর মতো action কাজ করার জন্য event delegation
+    listEl.onclick = (e) => {
+      const btn = e.target.closest("button");
+      const authorEl = e.target.closest(".post-author");
+
+      const cardFromBtn = btn?.closest(".post-card");
+      const cardFromAuthor = authorEl?.closest(".post-card");
+      const card = cardFromBtn || cardFromAuthor;
+      const postId = card?.dataset.id;
+
+      // Author এ ক্লিক করলে প্রোফাইল ওপেন
+      if (authorEl && card) {
+        const authorId = card.dataset.authorId;
+        if (authorId) {
+          showProfileView(authorId);
+        }
+        return;
+      }
+
+      if (!btn || !card || !postId) return;
+
+      if (btn.classList.contains("like-btn")) {
+        handleLike(postId, btn);
+      } else if (btn.classList.contains("comment-btn")) {
+        handleComment(postId, btn);
+      } else if (btn.classList.contains("save-btn")) {
+        handleSave(postId, btn);
+      } else if (btn.classList.contains("share-btn")) {
+        handleShare(postId);
+      } else if (btn.classList.contains("report-btn")) {
+        handleReport(postId);
+      }
+    };
+  } catch (err) {
+    console.error("loadProfilePosts error:", err);
+    listEl.innerHTML =
+      "<p style='font-size:14px;color:red;'>Error loading posts.</p>";
+  }
+}
+
 
 // ===============================
 // Search View
