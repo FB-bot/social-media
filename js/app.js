@@ -1007,7 +1007,7 @@ function formatTime(value) {
 
 
 // ===============================
-// SINGLE POST CARD TEMPLATE (FIXED AVATAR)
+// SINGLE POST CARD TEMPLATE (WITH COMMENTS AREA)
 // ===============================
 function postCardTemplate(id, data) {
   const authorPhoto = data.authorPhotoURL || "";
@@ -1056,9 +1056,17 @@ function postCardTemplate(id, data) {
         <button class="share-btn">Share</button>
         <button class="report-btn">Report</button>
       </div>
+
+      <!-- নতুন: কমেন্ট দেখানোর জায়গা -->
+      <div class="post-comments" data-post-id="${id}" style="margin-top:6px;">
+        <div class="post-comments-list" style="margin-top:4px;">
+          <!-- Realtime comments এখানে আসবে -->
+        </div>
+      </div>
     </article>
   `;
 }
+
 
 
 
@@ -2791,8 +2799,12 @@ function setupCreatePostForm() {
       const html = postCardTemplate(docRef.id, localData);
       postsList.insertAdjacentHTML("afterbegin", html);
 
+      // নতুন পোস্টের কমেন্টগুলোর জন্য realtime listener
+      attachCommentsListenerToPost(docRef.id);
+
       textEl.value = "";
       mediaInput.value = "";
+
     } catch (err) {
       console.error(err);
       alert("Post করতে সমস্যা হচ্ছে: " + err.message);
@@ -2812,7 +2824,11 @@ async function loadInitialPosts() {
 
   try {
     const postsCol = collection(db, "posts");
-    const qPosts = query(postsCol, orderBy("createdAt", "desc"), limit(PAGE_SIZE));
+    const qPosts = query(
+      postsCol,
+      orderBy("createdAt", "desc"),
+      limit(PAGE_SIZE)
+    );
     const snap = await getDocs(qPosts);
 
     const skeleton = document.getElementById("postsSkeleton");
@@ -2831,6 +2847,12 @@ async function loadInitialPosts() {
     });
 
     postsList.innerHTML = html;
+
+    // সব লোড হওয়া পোস্টের জন্য comments listener লাগাচ্ছি
+    snap.forEach((docSnap) => {
+      attachCommentsListenerToPost(docSnap.id);
+    });
+
     lastPostDoc = snap.docs[snap.docs.length - 1];
   } catch (err) {
     console.error(err);
@@ -2838,6 +2860,7 @@ async function loadInitialPosts() {
     isLoadingPosts = false;
   }
 }
+
 
 async function loadMorePosts() {
   if (!lastPostDoc || isLoadingPosts) return;
@@ -2869,6 +2892,12 @@ async function loadMorePosts() {
     });
 
     postsList.insertAdjacentHTML("beforeend", html);
+
+    // নিচে লোড হওয়া নতুন পোস্টগুলোর জন্যও comments listener
+    snap.forEach((docSnap) => {
+      attachCommentsListenerToPost(docSnap.id);
+    });
+
     lastPostDoc = snap.docs[snap.docs.length - 1];
   } catch (err) {
     console.error(err);
@@ -2876,6 +2905,7 @@ async function loadMorePosts() {
     isLoadingPosts = false;
   }
 }
+
 
 // ===============================
 // Follow System
@@ -3007,48 +3037,226 @@ async function handleLike(postId, btn) {
   }
 }
 
+
+
 async function handleComment(postId, btn) {
   if (!currentUser) return;
-  const text = prompt("Write a comment:");
-  if (!text || !text.trim()) return;
 
-  try {
-    const commentsCol = collection(db, "posts", postId, "comments");
-    await addDoc(commentsCol, {
-      text: text.trim(),
-      userId: currentUser.uid,
-      userName: currentUser.displayName || "User",
-      createdAt: serverTimestamp(),
-    });
+  // এই পোস্ট কার্ডটা বের করি
+  const card = document.querySelector(`.post-card[data-id="${postId}"]`);
+  if (!card) return;
 
-    const postRef = doc(db, "posts", postId);
-    await updateDoc(postRef, {
-      commentsCount: increment(1),
-    });
+  // কমেন্ট ইনলাইন ফর্ম আছে কিনা দেখি
+  let form = card.querySelector(".inline-comment-form");
+  if (!form) {
+    const listEl = card.querySelector(".post-comments-list");
 
-    const postSnap = await getDoc(postRef);
-    const postData = postSnap.data() || {};
+    form = document.createElement("div");
+    form.className = "inline-comment-form";
 
-    await createNotification({
-      userId: postData.authorId,
-      fromUserId: currentUser.uid,
-      type: "comment",
-      postId,
-      previewText: text.trim().slice(0, 60),
-    });
+    const name = currentUser.displayName || "You";
+    const photoURL = currentUser.photoURL || "";
+    const initials = name
+      .split(" ")
+      .map((p) => p[0] || "")
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
 
-    await logActivity("comment", {
-      postId,
-      previewText: text.trim().slice(0, 60),
-    });
+    form.innerHTML = `
+      <div class="comment-input-avatar">
+        ${
+          photoURL
+            ? `<img src="${photoURL}" alt="${name}" />`
+            : `<span>${initials}</span>`
+        }
+      </div>
+      <input
+        type="text"
+        class="inline-comment-input"
+        placeholder="Write a comment..."
+      />
+      <button type="button" class="inline-comment-send">Post</button>
+    `;
 
-    let currentCount = extractCountFromButton(btn.textContent);
-    currentCount += 1;
-    btn.textContent = `Comment (${currentCount})`;
-  } catch (err) {
-    console.error(err);
+    if (listEl) {
+      // কমেন্টগুলোর নিচে input বসাই
+      listEl.insertAdjacentElement("afterend", form);
+    } else {
+      card.appendChild(form);
+    }
   }
+
+  const input = form.querySelector(".inline-comment-input");
+  const sendBtn = form.querySelector(".inline-comment-send");
+
+  async function submitComment() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    try {
+      const commentsCol = collection(db, "posts", postId, "comments");
+      await addDoc(commentsCol, {
+        text,
+        userId: currentUser.uid,
+        userName: currentUser.displayName || "User",
+        userPhotoURL: currentUser.photoURL || "",
+        createdAt: serverTimestamp(),
+      });
+
+      const postRef = doc(db, "posts", postId);
+      await updateDoc(postRef, {
+        commentsCount: increment(1),
+      });
+
+      const postSnap = await getDoc(postRef);
+      const postData = postSnap.data() || {};
+
+      await createNotification({
+        userId: postData.authorId,
+        fromUserId: currentUser.uid,
+        type: "comment",
+        postId,
+        previewText: text.slice(0, 60),
+      });
+
+      await logActivity("comment", {
+        postId,
+        previewText: text.slice(0, 60),
+      });
+
+      // বোতামে থাকা Comment (x) count আপডেট করি
+      let currentCount = extractCountFromButton(btn.textContent);
+      currentCount += 1;
+      btn.textContent = `Comment (${currentCount})`;
+
+      input.value = "";
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  // একবারই listener bind করার জন্য flag
+  if (!form.dataset.listenersBound) {
+    form.dataset.listenersBound = "1";
+
+    sendBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      submitComment();
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        submitComment();
+      }
+    });
+  }
+
+  // input এ focus
+  input.focus();
 }
+
+
+
+// ===============================
+// Comments Realtime Listener per Post (Updated UI)
+// ===============================
+function attachCommentsListenerToPost(postId) {
+  const card = document.querySelector(`.post-card[data-id="${postId}"]`);
+  if (!card) return;
+
+  const listEl = card.querySelector(".post-comments-list");
+  if (!listEl) return;
+
+  const commentsCol = collection(db, "posts", postId, "comments");
+  const qComments = query(
+    commentsCol,
+    orderBy("createdAt", "desc"),
+    limit(50)
+  );
+
+  onSnapshot(qComments, (snap) => {
+    const comments = [];
+    snap.forEach((docSnap) => {
+      comments.push({ id: docSnap.id, ...docSnap.data() });
+    });
+
+    if (!comments.length) {
+      listEl.innerHTML =
+        '<div class="comments-empty">No comments yet.</div>';
+      card.classList.remove("has-comments");
+      return;
+    }
+
+    card.classList.add("has-comments");
+
+    let html = "";
+
+    comments.forEach((c, index) => {
+      const name = escapeHtml(c.userName || "User");
+      const text = escapeHtml(c.text || "");
+      const time = c.createdAt ? formatDate(c.createdAt) : "";
+      const avatarUrl = c.userPhotoURL || "";
+      const initials = name
+        .split(" ")
+        .map((p) => p[0] || "")
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+
+      // default অবস্থায় ৩টার পরেরগুলো hide হবে (CSS দিয়ে)
+      const extraClass = index >= 3 ? " comment-hidden" : "";
+
+      html += `
+        <div class="comment-item${extraClass}" data-comment-id="${c.id}">
+          <div class="comment-avatar">
+            ${
+              avatarUrl
+                ? `<img src="${avatarUrl}" alt="${name}" />`
+                : `<span>${initials}</span>`
+            }
+          </div>
+          <div class="comment-body">
+            <div class="comment-header-row">
+              <span class="comment-author" data-profile-id="${c.userId}">
+                ${name}
+              </span>
+              ${
+                time
+                  ? `<span class="comment-time">${time}</span>`
+                  : ""
+              }
+            </div>
+            <div class="comment-text">${text}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    // যদি ৩টার বেশি কমেন্ট থাকে, View all বাটন যোগ করি
+    if (comments.length > 3) {
+      html += `
+        <button
+          class="comments-view-toggle"
+          data-view-all-comments="${postId}"
+        >
+          View all ${comments.length} comments
+        </button>
+      `;
+      listEl.classList.remove("show-all");
+    } else {
+      listEl.classList.add("show-all");
+    }
+
+    listEl.innerHTML = html;
+  });
+}
+
+
+
+
+
 
 async function handleSave(postId, btn) {
   if (!currentUser) return;
@@ -3238,5 +3446,43 @@ onAuthStateChanged(auth, async (user) => {
       presenceIntervalId = null;
     }
     showLoginView();
+  }
+});
+
+
+// ===============================
+// Global click handler for comments UI
+// ===============================
+document.addEventListener("click", (e) => {
+  // View all / hide comments
+  const viewAllBtn = e.target.closest("[data-view-all-comments]");
+  if (viewAllBtn) {
+    const postId = viewAllBtn.dataset.viewAllComments;
+    const card = document.querySelector(`.post-card[data-id="${postId}"]`);
+    if (!card) return;
+    const listEl = card.querySelector(".post-comments-list");
+    if (!listEl) return;
+
+    const isAll = listEl.classList.contains("show-all");
+    if (isAll) {
+      listEl.classList.remove("show-all");
+      viewAllBtn.textContent = `View all ${card.querySelectorAll(
+        ".comment-item"
+      ).length} comments`;
+    } else {
+      listEl.classList.add("show-all");
+      viewAllBtn.textContent = "Hide comments";
+    }
+    return;
+  }
+
+  // কমেন্ট author-এর নাম এ ক্লিক করলে profile view
+  const authorEl = e.target.closest(".comment-author[data-profile-id]");
+  if (authorEl) {
+    const uid = authorEl.dataset.profileId;
+    if (uid) {
+      showProfileView(uid);
+    }
+    return;
   }
 });
