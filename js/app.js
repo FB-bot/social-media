@@ -727,8 +727,23 @@ function messagesViewTemplate() {
 }
 
 
-///
 
+// জয়েন ডেট সুন্দর করে দেখানোর helper
+function formatProfileJoinDate(date) {
+  try {
+    const options = { year: "numeric", month: "short" };
+    // উদাহরণ: "Joined Nov 2025"
+    return "Joined " + date.toLocaleDateString(undefined, options);
+  } catch (e) {
+    return "Joined";
+  }
+}
+
+
+
+// ===============================
+// Profile Template (final fixed)
+// ===============================
 function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
   const createdAt = userData.createdAt?.toDate
     ? userData.createdAt.toDate()
@@ -736,10 +751,13 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
     ? new Date(userData.createdAt)
     : null;
 
-  const joinDateText = createdAt ? createdAt.toLocaleDateString() : "Unknown";
+  const joinDateText = createdAt
+    ? formatProfileJoinDate(createdAt)
+    : "Joined";
 
   const followersCount = userData.followersCount || 0;
   const followingCount = userData.followingCount || 0;
+  const postsCount = userData.postsCount || 0;
 
   const bio = userData.bio || "";
   const photoURL = userData.photoURL || "";
@@ -748,7 +766,7 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
   const address = userData.address || "";
   const relationshipStatus = userData.relationshipStatus || "";
 
-  const suggestionsHtml = suggestions
+  const suggestionsHtml = (suggestions || [])
     .map(
       (item) => `
       <div class="suggested-user-item" data-user-id="${item.id}">
@@ -763,7 +781,13 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
             }</div>
           </div>
         </div>
-        <button class="follow-btn-suggest profile-edit-btn" style="margin-left:auto;">Follow</button>
+        <button
+          class="follow-btn-suggest profile-edit-btn"
+          data-user-id="${item.id}"
+          style="margin-left:auto;"
+        >
+          Follow
+        </button>
       </div>
     `
     )
@@ -783,7 +807,7 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
     </header>
 
     <main class="feed-main">
-      <!-- Top cover + avatar -->
+      <!-- COVER + AVATAR + BASIC INFO -->
       <section class="profile-main-card">
         <div class="profile-cover">
           ${
@@ -801,60 +825,89 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
             }
           </div>
         </div>
-        <div class="profile-basic-info">
+        <div class="profile-basic-info profile-header-row">
           <div class="profile-name">${userData.name || "User"}</div>
           <div class="profile-username">@${userData.username || "username"}</div>
 
-          <div class="profile-stats-row" style="margin-top:6px;font-size:14px;">
-            <span>Followers: ${followersCount}</span> •
-            <span>Following: ${followingCount}</span> •
-            <span>Joined: ${joinDateText}</span>
+          <div class="profile-bio">
+            ${bio || "No bio added yet."}
           </div>
+
+          <div class="profile-stats-row">
+            <div class="profile-stat-item">
+              <div class="profile-stat-label">Posts</div>
+              <div class="profile-stat-value">${postsCount}</div>
+            </div>
+            <div class="profile-stat-item">
+              <div class="profile-stat-label">Follower</div>
+              <div class="profile-stat-value">
+                <span id="profileFollowersCount">${followersCount}</span>
+              </div>
+            </div>
+            <div class="profile-stat-item">
+              <div class="profile-stat-label">Following</div>
+              <div class="profile-stat-value">
+                <span id="profileFollowingCount">${followingCount}</span>
+              </div>
+            </div>
+          </div>
+
 
           <div class="profile-actions-row">
             ${
               isCurrentUser
-                ? `<button id="editProfileBtn">Edit Profile</button>`
+                ? `
+              <button
+                class="profile-action-btn primary"
+                id="btnEditProfile"
+              >
+                ✏️ Edit Profile
+              </button>
+            `
                 : `
-                  <button id="followBtnMain">Follow</button>
-                  <button id="messageBtnMain" class="profile-edit-btn">Message</button>
-                `
+              <button
+                class="profile-action-btn primary"
+                id="btnFollowUser"
+                data-user-id="${userData.id || ""}"
+              >
+                ➕ Follow
+              </button>
+              <button
+                class="profile-action-btn"
+                id="btnMessageUser"
+              >
+                💬 Message
+              </button>
+            `
             }
           </div>
         </div>
       </section>
 
-      <!-- About + Bio + extra info -->
+      <!-- ABOUT CARD -->
       <section class="profile-main-card">
-        <h3 style="margin-bottom:8px;">About</h3>
-
-        <p class="profile-bio" style="margin-bottom:10px;">
-          ${bio || "No bio yet."}
-        </p>
-
-        <div class="profile-about-extra" style="display:flex;flex-direction:column;gap:6px;font-size:14px;">
-          <div style="display:flex;justify-content:space-between;">
-            <span>📍 Address</span>
-            <span style="font-weight:500;">${
-              address || "Not added"
-            }</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;">
-            <span>❤️ Relationship</span>
-            <span style="font-weight:500;">${
-              relationshipStatus || "Not added"
-            }</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;">
-            <span>📅 Joined</span>
-            <span style="font-weight:500;">${joinDateText}</span>
+        <div class="profile-about-card">
+          <div class="profile-about-title">About</div>
+          <div class="profile-about-list">
+            <div class="profile-about-item">
+              <span class="profile-about-label">Address</span>
+              <span>${address || "Not added"}</span>
+            </div>
+            <div class="profile-about-item">
+              <span class="profile-about-label">Relationship</span>
+              <span>${relationshipStatus || "Not added"}</span>
+            </div>
+            <div class="profile-about-item">
+              <span class="profile-about-label">Joined</span>
+              <span>${joinDateText}</span>
+            </div>
           </div>
         </div>
 
         ${
           isCurrentUser
             ? `
-          <div id="profileEditArea" style="display:none;margin-top:12px;">
+          <div id="profileEditArea" style="margin-top:12px;">
             <h4 style="margin-bottom:6px;">Edit Profile</h4>
             <form id="profileEditForm" class="profile-edit-form">
               <input
@@ -911,9 +964,9 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
         }
       </section>
 
-      <!-- Posts section -->
-      <section class="profile-main-card">
-        <h3 style="margin-bottom:8px;">${postsTitle}</h3>
+      <!-- POSTS SECTION -->
+      <section class="profile-main-card profile-posts-section">
+        <div class="profile-posts-title">${postsTitle}</div>
         <div id="profilePostsList">
           <p style="font-size:14px;color:#666;">Loading posts...</p>
         </div>
@@ -921,8 +974,8 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
 
       <!-- People you may know -->
       <section class="profile-main-card">
-        <h3>People you may know</h3>
-        <div class="suggested-users-list" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+        <h3 style="margin-bottom:8px;">People you may know</h3>
+        <div class="suggested-users-list" style="display:flex;flex-direction:column;gap:6px;">
           ${
             suggestionsHtml ||
             "<p style='font-size:14px;color:#666;'>No suggestions.</p>"
@@ -933,6 +986,10 @@ function profileViewTemplate(userData, isCurrentUser, suggestions = []) {
   </div>
   `;
 }
+
+
+
+
 
 
 
@@ -2275,9 +2332,6 @@ async function markIncomingMessagesAsSeen(chatId, partnerId, snap) {
   }
 }
 
-// ===============================
-// Profile View
-// ===============================
 
 // ===============================
 // Profile View
@@ -2297,14 +2351,14 @@ async function showProfileView(userId) {
       return;
     }
 
-    const userData = userSnap.data();
+    // ⭐ এখানে id রেখে দিলাম, যাতে template আর follow logic দুই জায়গায় কাজে লাগে
+    const userData = { id: userSnap.id, ...userSnap.data() };
     const isCurrentUser = currentUser.uid === userId;
 
-    // Suggestions
+    // simple suggestions
     const suggestions = [];
     const usersCol = collection(db, "users");
-    const qUsers = query(usersCol, limit(10));
-    const usersSnap = await getDocs(qUsers);
+    const usersSnap = await getDocs(usersCol);
     usersSnap.forEach((docSnap) => {
       if (docSnap.id === currentUser.uid || docSnap.id === userId) return;
       suggestions.push({ id: docSnap.id, data: docSnap.data() });
@@ -2313,16 +2367,17 @@ async function showProfileView(userId) {
     render(profileViewTemplate(userData, isCurrentUser, suggestions.slice(0, 5)));
     setupTopNavCommon();
 
-    // নিজের প্রোফাইল হলে: edit form
     if (isCurrentUser) {
-      const editBtn = document.getElementById("editProfileBtn");
-      const editArea = document.getElementById("profileEditArea");
+      // নিজের প্রোফাইল → Edit Profile
+      const editBtn = document.getElementById("btnEditProfile");
       const editForm = document.getElementById("profileEditForm");
 
-      if (editBtn && editArea && editForm) {
+      if (editBtn && editForm) {
         editBtn.addEventListener("click", () => {
-          editArea.style.display =
-            editArea.style.display === "none" || !editArea.style.display
+          const area = document.getElementById("profileEditArea");
+          if (!area) return;
+          area.style.display =
+            area.style.display === "none" || !area.style.display
               ? "block"
               : "none";
         });
@@ -2359,7 +2414,6 @@ async function showProfileView(userId) {
               relationshipStatus,
             });
 
-            // Firebase Auth profile আপডেট
             if (name && currentUser.displayName !== name) {
               await updateProfile(currentUser, { displayName: name });
             }
@@ -2368,7 +2422,6 @@ async function showProfileView(userId) {
             }
 
             await logActivity("profile_update", {});
-
             alert("Profile updated!");
             showProfileView(userId);
           } catch (err) {
@@ -2378,47 +2431,60 @@ async function showProfileView(userId) {
         });
       }
     } else {
-      // অন্যের প্রোফাইল – Follow + Message
-      const followBtnMain = document.getElementById("followBtnMain");
-      if (followBtnMain) {
-        setupFollowButton(userId, followBtnMain);
+      // অন্যের প্রোফাইল → Follow + Message
+
+      const followBtn = document.getElementById("btnFollowUser");
+      if (followBtn) {
+        // ⭐ আগের follow logic যেভাবে কাজ করত, ঠিক সেভাবে
+        // সাধারণত setupFollowButton শুধু button নেয় এবং button.dataset.userId থেকে userId পড়ে
+        if (typeof setupFollowButton === "function") {
+          setupFollowButton(followBtn);
+        } else {
+          // backup: শুধু console এ দেখাই, যেন crash না করে
+          followBtn.addEventListener("click", () => {
+            console.log("Follow clicked (setupFollowButton not found)");
+          });
+        }
       }
 
-      const messageBtnMain = document.getElementById("messageBtnMain");
-      if (messageBtnMain) {
-        messageBtnMain.addEventListener("click", () => {
+      const messageBtn = document.getElementById("btnMessageUser");
+      if (messageBtn) {
+        messageBtn.addEventListener("click", () => {
           const displayName =
             userData.name || userData.username || "User";
           showMessagesView();
-          setTimeout(() => {
-            if (typeof openChatWithUser === "function") {
+          if (typeof openChatWithUser === "function") {
+            setTimeout(() => {
               openChatWithUser(userId, displayName);
-            }
-          }, 200);
+            }, 200);
+          }
         });
       }
     }
 
-    // "People you may know" click
-    document
-      .querySelector(".suggested-users-list")
-      ?.addEventListener("click", (e) => {
-        const targetItem = e.target.closest(".suggested-user-item");
-        if (!targetItem) return;
-        const targetId = targetItem.dataset.userId;
+    // Suggestions click handling (People you may know)
+    const suggestionsList = document.querySelector(".suggested-users-list");
+    if (suggestionsList) {
+      suggestionsList.addEventListener("click", (e) => {
+        const item = e.target.closest(".suggested-user-item");
+        if (!item) return;
+        const targetId = item.dataset.userId;
         if (!targetId) return;
 
         if (e.target.classList.contains("follow-btn-suggest")) {
-          setupFollowButton(targetId, e.target);
+          if (typeof setupFollowButton === "function") {
+            setupFollowButton(e.target);
+          }
         } else if (e.target.closest(".suggested-user-info")) {
           showProfileView(targetId);
         }
       });
+    }
 
-    // 🔹 প্রোফাইল পোস্ট লোড করা
-    await loadProfilePosts(userId);
+    // ⭐ প্রোফাইলের সব পোস্ট লোড করবো (নতুন template ব্যবহার করে)
+    await loadProfilePosts(userId, userData);
   } catch (err) {
-    console.error(err);
+    console.error("showProfileView error:", err);
     alert("Profile load error");
     showFeedView();
   }
@@ -2426,10 +2492,152 @@ async function showProfileView(userId) {
 
 
 
+
+
 // ===============================
-// Profile posts loader
+// Profile specific post card template
 // ===============================
-async function loadProfilePosts(userId) {
+function profilePostCardTemplate(post, profileUserData) {
+  const name =
+    post.authorName ||
+    profileUserData?.name ||
+    profileUserData?.username ||
+    "User";
+
+  const avatarUrl =
+    post.authorPhotoURL ||
+    profileUserData?.photoURL ||
+    "";
+
+  const initials = name
+    .split(" ")
+    .map((p) => p[0] || "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const avatarHtml = avatarUrl
+    ? `<img src="${avatarUrl}" alt="${name}" />`
+    : `<span>${initials}</span>`;
+
+  const likeCount = post.likeCount || 0;
+  const commentCount = post.commentCount || 0;
+
+  return `
+    <div class="post-card" data-post-id="${post.id}" data-author-id="${
+    post.authorId || ""
+  }">
+      <div class="post-header">
+        <div class="post-avatar">
+          ${avatarHtml}
+        </div>
+        <div class="post-meta">
+          <div class="post-author">${name}</div>
+          <div class="post-time">${
+            typeof formatTime === "function"
+              ? formatTime(post.createdAt)
+              : ""
+          }</div>
+        </div>
+      </div>
+
+      <div class="post-content">
+        ${typeof escapeHtml === "function"
+          ? escapeHtml(post.text || "")
+          : (post.text || "")
+        }
+      </div>
+
+      ${
+        post.mediaUrl
+          ? `
+        <div class="post-media">
+          ${
+            post.mediaType === "video"
+              ? `<video src="${post.mediaUrl}" controls></video>`
+              : `<img src="${post.mediaUrl}" alt="Post media" />`
+          }
+        </div>
+      `
+          : ""
+      }
+
+      <div class="post-actions">
+        <button class="like-btn" data-post-id="${post.id}">
+          <span class="action-label">Like</span>
+          <span class="action-count" data-like-count="${post.id}">
+            ${likeCount}
+          </span>
+        </button>
+
+        <button class="comment-btn" data-post-id="${post.id}">
+          <span class="action-label">Comment</span>
+          <span class="action-count" data-comment-count="${post.id}">
+            ${commentCount}
+          </span>
+        </button>
+
+        <button class="save-btn" data-post-id="${post.id}">
+          <span class="action-label">Save</span>
+        </button>
+
+        <button class="share-btn" data-post-id="${post.id}">
+          <span class="action-label">Share</span>
+        </button>
+      </div>
+
+      <!-- Comments section (যদি আগে থেকে setup থাকে) -->
+      <div class="comments-section" data-post-id="${post.id}">
+        <div class="comments-header">
+          <span class="comments-header-title">Comments</span>
+          <span
+            class="comments-count"
+            data-comment-count-label="${post.id}"
+          >
+            ${commentCount} comment${commentCount === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        <button
+          class="comments-view-toggle"
+          data-comments-toggle="${post.id}"
+          style="display:none;"
+        >
+          View all comments
+        </button>
+
+        <div
+          class="comments-list collapsed"
+          id="comments-${post.id}"
+        ></div>
+
+        <div class="comment-input-row">
+          <div class="comment-input-avatar" data-current-user-avatar></div>
+          <input
+            type="text"
+            placeholder="Write a comment..."
+            data-comment-input="${post.id}"
+          />
+          <button
+            type="button"
+            data-comment-submit="${post.id}"
+          >
+            Post
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+
+
+
+
+// ===============================
+// Profile posts loader (use profilePostCardTemplate)
+// ===============================
+async function loadProfilePosts(userId, profileUserData) {
   const listEl = document.getElementById("profilePostsList");
   if (!listEl) return;
 
@@ -2437,14 +2645,11 @@ async function loadProfilePosts(userId) {
     "<p style='font-size:14px;color:#666;'>Loading posts...</p>";
 
   try {
-    const postsCol = collection(db, "posts");
-    const qPosts = query(
-      postsCol,
-      where("authorId", "==", userId),
-      orderBy("createdAt", "desc"),
-      limit(20)
-    );
-    const snap = await getDocs(qPosts);
+    const postsRef = collection(db, "posts");
+
+    // authorId দিয়ে filter, কোনো orderBy নেই → index লাগবে না
+    const q = query(postsRef, where("authorId", "==", userId));
+    const snap = await getDocs(q);
 
     if (snap.empty) {
       listEl.innerHTML =
@@ -2452,57 +2657,47 @@ async function loadProfilePosts(userId) {
       return;
     }
 
-    let html = "";
+    const posts = [];
     snap.forEach((docSnap) => {
-      html += postCardTemplate(docSnap.id, docSnap.data());
+      const data = docSnap.data();
+      posts.push({ id: docSnap.id, ...data });
+    });
+
+    // JS দিয়ে createdAt অনুযায়ী sort (নতুন আগে)
+    posts.sort((a, b) => {
+      const ta =
+        a.createdAt && typeof a.createdAt.toDate === "function"
+          ? a.createdAt.toDate().getTime()
+          : 0;
+      const tb =
+        b.createdAt && typeof b.createdAt.toDate === "function"
+          ? b.createdAt.toDate().getTime()
+          : 0;
+      return tb - ta; // desc
+    });
+
+    let html = "";
+    posts.forEach((post) => {
+      html += profilePostCardTemplate(post, profileUserData);
     });
 
     listEl.innerHTML = html;
 
-    // প্রতিটি পোস্টের জন্য comments realtime listener
-    snap.forEach((docSnap) => {
-      attachCommentsListenerToPost(docSnap.id);
-    });
-
-    // একই feed-এর মতো action কাজ করার জন্য event delegation
-    listEl.onclick = (e) => {
-      const btn = e.target.closest("button");
-      const authorEl = e.target.closest(".post-author");
-
-      const cardFromBtn = btn?.closest(".post-card");
-      const cardFromAuthor = authorEl?.closest(".post-card");
-      const card = cardFromBtn || cardFromAuthor;
-      const postId = card?.dataset.id;
-
-      // Author এ ক্লিক করলে প্রোফাইল ওপেন
-      if (authorEl && card) {
-        const authorId = card.dataset.authorId;
-        if (authorId) {
-          showProfileView(authorId);
-        }
-        return;
-      }
-
-      if (!btn || !card || !postId) return;
-
-      if (btn.classList.contains("like-btn")) {
-        handleLike(postId, btn);
-      } else if (btn.classList.contains("comment-btn")) {
-        handleComment(postId, btn);
-      } else if (btn.classList.contains("save-btn")) {
-        handleSave(postId, btn);
-      } else if (btn.classList.contains("share-btn")) {
-        handleShare(postId);
-      } else if (btn.classList.contains("report-btn")) {
-        handleReport(postId);
-      }
-    };
+    // প্রতিটি পোস্টের জন্য comments listener (আগের মতো)
+    if (typeof startCommentsListener === "function") {
+      posts.forEach((post) => {
+        startCommentsListener(post.id);
+      });
+    }
   } catch (err) {
     console.error("loadProfilePosts error:", err);
     listEl.innerHTML =
       "<p style='font-size:14px;color:red;'>Error loading posts.</p>";
   }
 }
+
+
+
 
 
 // ===============================
@@ -3105,59 +3300,125 @@ async function loadMorePosts() {
 // Follow System
 // ===============================
 
-async function setupFollowButton(targetUserId, btn) {
+async function setupFollowButton(targetUserIdOrBtn, maybeBtn) {
   if (!currentUser) return;
+
+  let targetUserId = null;
+  let btn = null;
+
+  // দুইভাবে কল সাপোর্ট করি:
+  // 1) setupFollowButton(userId, button)
+  // 2) setupFollowButton(button) → button.dataset.userId থেকে নেবে
+  if (typeof targetUserIdOrBtn === "string") {
+    targetUserId = targetUserIdOrBtn;
+    btn = maybeBtn;
+  } else if (targetUserIdOrBtn && targetUserIdOrBtn.dataset) {
+    btn = targetUserIdOrBtn;
+    targetUserId = targetUserIdOrBtn.dataset.userId;
+  }
+
+  if (!targetUserId || !btn) {
+    console.warn("setupFollowButton: missing targetUserId or button");
+    return;
+  }
+
+  // নিজের প্রোফাইলে follow দেখাব না
+  if (targetUserId === currentUser.uid) {
+    btn.style.display = "none";
+    return;
+  }
+
+  // Profile পেইজে থাকলে এই দুইটা থাকবে, না থাকলে null হবে
+  const followersCountEl = document.getElementById("profileFollowersCount");
+  const followingCountEl = document.getElementById("profileFollowingCount");
+
+  const getCount = (el) =>
+    el ? parseInt(el.textContent || "0", 10) || 0 : 0;
+  const setCount = (el, val) => {
+    if (el) el.textContent = String(val);
+  };
 
   try {
     const followDocId = `${currentUser.uid}_${targetUserId}`;
     const followRef = doc(db, "follows", followDocId);
     const snap = await getDoc(followRef);
 
+    // প্রথমে বাটনের স্টেট সেট করি
     btn.textContent = snap.exists() ? "Following" : "Follow";
 
     btn.onclick = async () => {
-      const snapNow = await getDoc(followRef);
-      const targetUserRef = doc(db, "users", targetUserId);
-      const currentUserRef = doc(db, "users", currentUser.uid);
+      if (!currentUser) return;
+      btn.disabled = true;
 
-      if (!snapNow.exists()) {
-        await setDoc(followRef, {
-          followerId: currentUser.uid,
-          followingId: targetUserId,
-          createdAt: serverTimestamp(),
-        });
-        await updateDoc(targetUserRef, {
-          followersCount: increment(1),
-        });
-        await updateDoc(currentUserRef, {
-          followingCount: increment(1),
-        });
-        btn.textContent = "Following";
+      try {
+        const snapNow = await getDoc(followRef);
+        const targetUserRef = doc(db, "users", targetUserId);
+        const currentUserRef = doc(db, "users", currentUser.uid);
 
-        await createNotification({
-          userId: targetUserId,
-          fromUserId: currentUser.uid,
-          type: "follow",
-        });
+        if (!snapNow.exists()) {
+          // 👉 FOLLOW
+          await setDoc(followRef, {
+            followerId: currentUser.uid,
+            followingId: targetUserId,
+            createdAt: serverTimestamp(),
+          });
 
-        await logActivity("follow", { targetUserId });
-      } else {
-        await deleteDoc(followRef);
-        await updateDoc(targetUserRef, {
-          followersCount: increment(-1),
-        });
-        await updateDoc(currentUserRef, {
-          followingCount: increment(-1),
-        });
-        btn.textContent = "Follow";
+          await updateDoc(targetUserRef, {
+            followersCount: increment(1),
+          });
+          await updateDoc(currentUserRef, {
+            followingCount: increment(1),
+          });
 
-        await logActivity("unfollow", { targetUserId });
+          btn.textContent = "Following";
+
+          // UI কাউন্ট আপডেট (শুধু প্রোফাইল পেইজে থাকলে আপডেট হবে)
+          setCount(followersCountEl, getCount(followersCountEl) + 1);
+
+          // Notification থাকলে পাঠাই
+          if (typeof createNotification === "function") {
+            await createNotification({
+              userId: targetUserId,
+              fromUserId: currentUser.uid,
+              type: "follow",
+            });
+          }
+
+          await logActivity("follow", { targetUserId });
+        } else {
+          // 👉 UNFOLLOW
+          await deleteDoc(followRef);
+
+          await updateDoc(targetUserRef, {
+            followersCount: increment(-1),
+          });
+          await updateDoc(currentUserRef, {
+            followingCount: increment(-1),
+          });
+
+          btn.textContent = "Follow";
+
+          setCount(
+            followersCountEl,
+            Math.max(0, getCount(followersCountEl) - 1)
+          );
+
+          await logActivity("unfollow", { targetUserId });
+        }
+      } catch (err) {
+        console.error("Follow/unfollow error:", err);
+        alert("Follow করতে সমস্যা হচ্ছে, আবার চেষ্টা করুন");
+      } finally {
+        btn.disabled = false;
       }
     };
   } catch (err) {
     console.error(err);
   }
 }
+
+
+
 
 // ===============================
 // Activity Logger
