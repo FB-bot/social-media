@@ -3212,6 +3212,9 @@ async function loadInitialPosts() {
   isLoadingPosts = true;
 
   try {
+    // 👉 আগে follow list আনছি
+    const followingIds = await getFollowingIdsForCurrentUser();
+
     const postsCol = collection(db, "posts");
     const qPosts = query(
       postsCol,
@@ -3230,14 +3233,37 @@ async function loadInitialPosts() {
       return;
     }
 
-    let html = "";
+    // 🔹 আগে সব পোস্ট array তে নিয়ে আসি
+    const posts = [];
     snap.forEach((docSnap) => {
-      html += postCardTemplate(docSnap.id, docSnap.data());
+      posts.push({ id: docSnap.id, ...docSnap.data() });
+    });
+
+    // 🔹 দুই ভাগ – যাদের follow করেছি / করিনি
+    const preferred = [];
+    const others = [];
+
+    posts.forEach((p) => {
+      const authorId = p.authorId;
+      if (authorId && followingIds.has(authorId)) {
+        preferred.push(p);
+      } else {
+        others.push(p);
+      }
+    });
+
+    // 🔹 আগে follow–দের পোস্ট, তারপর বাকি
+    const orderedPosts = preferred.concat(others);
+
+    // HTML বানানো
+    let html = "";
+    orderedPosts.forEach((p) => {
+      html += postCardTemplate(p.id, p);
     });
 
     postsList.innerHTML = html;
 
-    // সব লোড হওয়া পোস্টের জন্য comments listener লাগাচ্ছি
+    // সব লোড হওয়া পোস্টের জন্য comments listener লাগাচ্ছি (আগের মতো)
     snap.forEach((docSnap) => {
       attachCommentsListenerToPost(docSnap.id);
     });
@@ -3251,6 +3277,41 @@ async function loadInitialPosts() {
 }
 
 
+
+// ===============================
+// Helper: currentUser যাদেরকে follow করেছে তাদের আইডি তালিকা
+// ===============================
+async function getFollowingIdsForCurrentUser() {
+  const set = new Set();
+  if (!currentUser) return set;
+
+  // নিজের পোস্টগুলোও যেন প্রাধান্য পায়
+  set.add(currentUser.uid);
+
+  try {
+    const followsCol = collection(db, "follows");
+    const qF = query(
+      followsCol,
+      where("followerId", "==", currentUser.uid)
+    );
+    const snap = await getDocs(qF);
+
+    snap.forEach((docSnap) => {
+      const d = docSnap.data();
+      if (d.followingId) {
+        set.add(d.followingId);
+      }
+    });
+  } catch (err) {
+    console.error("getFollowingIdsForCurrentUser error:", err);
+  }
+
+  return set;
+}
+
+
+
+
 async function loadMorePosts() {
   if (!lastPostDoc || isLoadingPosts) return;
 
@@ -3260,6 +3321,9 @@ async function loadMorePosts() {
   isLoadingPosts = true;
 
   try {
+    // আবারও follow list আনছি (চাইলে cache করতে পারো, কিন্তু simple রাখলাম)
+    const followingIds = await getFollowingIdsForCurrentUser();
+
     const postsCol = collection(db, "posts");
     const qPosts = query(
       postsCol,
@@ -3275,14 +3339,33 @@ async function loadMorePosts() {
       return;
     }
 
-    let html = "";
+    const posts = [];
     snap.forEach((docSnap) => {
-      html += postCardTemplate(docSnap.id, docSnap.data());
+      posts.push({ id: docSnap.id, ...docSnap.data() });
+    });
+
+    const preferred = [];
+    const others = [];
+
+    posts.forEach((p) => {
+      const authorId = p.authorId;
+      if (authorId && followingIds.has(authorId)) {
+        preferred.push(p);
+      } else {
+        others.push(p);
+      }
+    });
+
+    const orderedPosts = preferred.concat(others);
+
+    let html = "";
+    orderedPosts.forEach((p) => {
+      html += postCardTemplate(p.id, p);
     });
 
     postsList.insertAdjacentHTML("beforeend", html);
 
-    // নিচে লোড হওয়া নতুন পোস্টগুলোর জন্যও comments listener
+    // নিচে লোড হওয়া নতুন পোস্টগুলোর জন্যও comments listener (আগের মতো)
     snap.forEach((docSnap) => {
       attachCommentsListenerToPost(docSnap.id);
     });
@@ -3294,6 +3377,9 @@ async function loadMorePosts() {
     isLoadingPosts = false;
   }
 }
+
+
+
 
 
 // ===============================
